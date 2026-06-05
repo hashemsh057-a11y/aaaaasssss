@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.log
+db.sqlite3
+media/
+staticfiles/
+.env
+venv/
+.venv/
+node_modules/
+.next/
+*.tsbuildinfo
+dist/
+build/

@@ -1,0 +1,42 @@
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+from django.views.generic import RedirectView
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
+from maintenance.views import (
+    CompanyProfileViewSet,
+    DashboardStatisticsAPIView,
+    EngineerProfileViewSet,
+    MaintenanceRequestViewSet,
+    PublicContactInquiryAPIView,
+    PublicImpactStatisticsAPIView,
+    PublicRequestTrackingAPIView,
+    RequestEvidenceViewSet,
+    UserViewSet,
+)
+
+router = DefaultRouter()
+router.register("users", UserViewSet, basename="user")
+router.register("companies", CompanyProfileViewSet, basename="company")
+router.register("engineers", EngineerProfileViewSet, basename="engineer")
+router.register("maintenance-requests", MaintenanceRequestViewSet, basename="maintenance-request")
+router.register("request-evidences", RequestEvidenceViewSet, basename="request-evidence")
+
+urlpatterns = [
+    path("", RedirectView.as_view(url=settings.FRONTEND_URL, permanent=False), name="frontend-redirect"),
+    path("admin/", admin.site.urls),
+    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+    path("api/dashboard/statistics/", DashboardStatisticsAPIView.as_view(), name="dashboard-statistics"),
+    path("api/public/contact/", PublicContactInquiryAPIView.as_view(), name="public-contact-inquiry"),
+    path("api/public/impact/", PublicImpactStatisticsAPIView.as_view(), name="public-impact-statistics"),
+    path("api/public/track/<int:ticket_number>/", PublicRequestTrackingAPIView.as_view(), name="public-request-tracking"),
+    path("api/", include(router.urls)),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
