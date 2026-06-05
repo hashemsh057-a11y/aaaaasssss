@@ -29,7 +29,7 @@ ALLOWED_HOSTS = [
     for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,.pythonanywhere.com").split(",")
     if host.strip()
 ]
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:3000/")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:3000/" if DEBUG else "/admin/")
 
 
 INSTALLED_APPS = [

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
 from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
@@ -27,6 +28,7 @@ router.register("request-evidences", RequestEvidenceViewSet, basename="request-e
 
 urlpatterns = [
     path("", RedirectView.as_view(url=settings.FRONTEND_URL, permanent=False), name="frontend-redirect"),
+    path("health/", lambda request: JsonResponse({"status": "ok"}), name="health-check"),
     path("admin/", admin.site.urls),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
