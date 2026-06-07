@@ -142,17 +142,27 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # تحديد نموذج المستخدم المخصص
 AUTH_USER_MODEL = "maintenance.User"
 
-# إعدادات الـ CORS للسماح للفرونت إند (Next.js) بالاتصال
+# إعدادات الـ CORS للسماح للفرونت إند بالاتصال (تم تحديثها لتشمل روابط النشر محلياً وسحابياً)
+default_cors_origins = (
+    "http://localhost:3000,"
+    "http://127.0.0.1:3000,"
+    "https://aaaaasssss.pages.dev"
+)
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", default_cors_origins).split(",")
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# السماح لـ Cloudflare ونطاقات السيرفر في الـ CSRF
+default_csrf_origins = (
+    "https://*.pythonanywhere.com,"
+    "https://aaaaasssss.pages.dev"
+)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://*.pythonanywhere.com").split(",")
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", default_csrf_origins).split(",")
     if origin.strip()
 ]
 
