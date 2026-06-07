@@ -6,12 +6,15 @@ import type {
   MaintenanceStatus,
   PublicContactPayload,
   PublicImpactStatistics,
+  PublicMaintenanceRequestPayload,
   PublicTrackedRequest,
   RequestCreatePayload,
   User
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const rawApiBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "maintenance_access_token";
 const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
 
@@ -160,6 +163,13 @@ export function trackPublicRequest(ticketNumber: string) {
 
 export function submitPublicContactInquiry(payload: PublicContactPayload) {
   return apiFetch<{ id: number; created_at: string } & PublicContactPayload>("/public/contact/", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function submitPublicMaintenanceRequest(payload: PublicMaintenanceRequestPayload) {
+  return apiFetch<PublicTrackedRequest>("/public/requests/", {
     method: "POST",
     body: JSON.stringify(payload)
   });

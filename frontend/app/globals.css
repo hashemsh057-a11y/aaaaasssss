@@ -1,5 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --bg: #eef3f1;
   --ink: #17201d;
@@ -219,6 +223,27 @@ textarea {
 textarea {
   min-block-size: 98px;
   resize: vertical;
+}
+
+.public-input {
+  inline-size: 100%;
+  min-block-size: 48px;
+  border: 1px solid #d8e7e3;
+  border-radius: 16px;
+  background: rgba(251, 253, 249, 0.9);
+  color: #1b2b27;
+  padding: 12px 14px;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+}
+
+.public-input:focus {
+  border-color: #0f8d86;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(191, 236, 239, 0.48);
+  outline: 0;
 }
 
 .primary-action,
@@ -912,6 +937,3 @@ textarea {
     transition-duration: 1ms !important;
   }
 }
-
-@tailwind components;
-@tailwind utilities;

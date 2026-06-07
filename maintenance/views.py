@@ -20,6 +20,7 @@ from .serializers import (
     EngineerProfileSerializer,
     MaintenanceRequestSerializer,
     PublicContactInquirySerializer,
+    PublicMaintenanceRequestCreateSerializer,
     PublicMaintenanceRequestTrackingSerializer,
     RequestEvidenceSerializer,
     UserSerializer,
@@ -151,6 +152,17 @@ class PublicRequestTrackingAPIView(APIView):
             return Response({"detail": "Ticket number was not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = PublicMaintenanceRequestTrackingSerializer(maintenance_request)
         return Response(serializer.data)
+
+
+class PublicMaintenanceRequestCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PublicMaintenanceRequestCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        maintenance_request = serializer.save()
+        response_serializer = PublicMaintenanceRequestTrackingSerializer(maintenance_request)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class PublicContactInquiryAPIView(APIView):

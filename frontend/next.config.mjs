@@ -7,6 +7,11 @@ const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  output: "export",
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
   outputFileTracingRoot: currentDirectory
 };
 

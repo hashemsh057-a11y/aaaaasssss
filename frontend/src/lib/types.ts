@@ -132,3 +132,18 @@ export type PublicContactPayload = {
   phone: string;
   message: string;
 };
+
+export type PublicMaintenanceRequestPayload = {
+  contact_name: string;
+  company_name: string;
+  commercial_register: string;
+  email: string;
+  phone: string;
+  address: string;
+  issue_type: MaintenanceSpecialty;
+  priority: Priority;
+  location_details: string;
+  description: string;
+  preferred_date: string;
+  is_hazardous: boolean;
+};

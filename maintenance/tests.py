@@ -260,3 +260,27 @@ class PublicEndpointTests(MaintenanceAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(PublicContactInquiry.objects.filter(email="contact@example.com").exists())
+
+    def test_public_maintenance_request_creates_company_and_ticket(self):
+        payload = {
+            "contact_name": "Hashim Nabih",
+            "company_name": "New Facility Co",
+            "commercial_register": "CR-900",
+            "email": "facility@example.com",
+            "phone": "+218 91 555 5555",
+            "address": "Tripoli central district",
+            "issue_type": MaintenanceSpecialty.HVAC,
+            "priority": MaintenanceRequest.Priority.MEDIUM,
+            "location_details": "Main lobby cooling unit",
+            "description": "Cooling is unstable during working hours.",
+            "preferred_date": (timezone.now() + timedelta(days=1)).isoformat(),
+            "is_hazardous": False,
+        }
+
+        response = self.client.post(reverse("public-maintenance-request-create"), payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        maintenance_request = MaintenanceRequest.objects.get(id=response.data["id"])
+        self.assertEqual(maintenance_request.status, MaintenanceRequest.Status.NEW)
+        self.assertEqual(maintenance_request.client_company.company_name, "New Facility Co")
+        self.assertEqual(maintenance_request.client_company.user.role, User.Role.CLIENT_COMPANY)

@@ -1,9 +1,22 @@
+import re
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
-from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, PublicContactInquiry, RequestEvidence, User
+from .models import (
+    CompanyProfile,
+    EngineerProfile,
+    MaintenanceRequest,
+    MaintenanceSpecialty,
+    PublicContactInquiry,
+    RequestEvidence,
+    User,
+    phone_validator,
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -357,6 +370,100 @@ class PublicMaintenanceRequestTrackingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
+    contact_name = serializers.CharField(max_length=120, write_only=True)
+    company_name = serializers.CharField(max_length=180, write_only=True)
+    commercial_register = serializers.CharField(max_length=80, write_only=True)
+    email = serializers.EmailField(write_only=True)
+    phone = serializers.CharField(max_length=20, write_only=True)
+    address = serializers.CharField(write_only=True)
+    issue_type = serializers.ChoiceField(choices=MaintenanceSpecialty.choices, write_only=True)
+    priority = serializers.ChoiceField(choices=MaintenanceRequest.Priority.choices, write_only=True)
+    location_details = serializers.CharField(write_only=True)
+    description = serializers.CharField(write_only=True)
+    preferred_date = serializers.DateTimeField(write_only=True)
+    is_hazardous = serializers.BooleanField(default=False, write_only=True)
+
+    def validate_preferred_date(self, value):
+        if value < timezone.now() - timedelta(minutes=5):
+            raise serializers.ValidationError("Preferred date cannot be in the past.")
+        return value
+
+    def validate_phone(self, value):
+        try:
+            phone_validator(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def _build_unique_username(self, email):
+        local_part = email.split("@", 1)[0].lower()
+        base = re.sub(r"[^a-z0-9_.-]+", "-", local_part).strip("-_.") or "company"
+        base = f"public-{base}"[:138].rstrip("-_.")
+        candidate = base
+        counter = 1
+        UserModel = get_user_model()
+        while UserModel.objects.filter(username=candidate).exists():
+            suffix = f"-{counter}"
+            candidate = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return candidate
+
+    def _get_or_create_company(self, validated_data):
+        UserModel = get_user_model()
+        email = UserModel.objects.normalize_email(validated_data["email"]).lower()
+        user = UserModel.objects.filter(email__iexact=email).first()
+
+        if user and user.role != User.Role.CLIENT_COMPANY:
+            raise serializers.ValidationError({"email": "This email is already registered for a non-company account."})
+
+        if user is None:
+            user = UserModel(
+                username=self._build_unique_username(email),
+                email=email,
+                role=User.Role.CLIENT_COMPANY,
+                first_name=validated_data["contact_name"][:150],
+                is_active=True,
+            )
+            user.set_unusable_password()
+            user.full_clean()
+            user.save()
+
+        try:
+            return user.company_profile
+        except CompanyProfile.DoesNotExist:
+            company = CompanyProfile(
+                user=user,
+                company_name=validated_data["company_name"],
+                commercial_register=validated_data["commercial_register"],
+                contact_phone=validated_data["phone"],
+                address=validated_data["address"],
+            )
+            company.full_clean()
+            company.save()
+            return company
+
+    @transaction.atomic
+    def create(self, validated_data):
+        company = self._get_or_create_company(validated_data)
+        maintenance_request = MaintenanceRequest(
+            client_company=company,
+            issue_type=validated_data["issue_type"],
+            priority=validated_data["priority"],
+            location_details=validated_data["location_details"],
+            description=validated_data["description"],
+            preferred_date=validated_data["preferred_date"],
+            is_hazardous=validated_data.get("is_hazardous", False),
+            status=MaintenanceRequest.Status.NEW,
+        )
+        try:
+            maintenance_request.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
+        maintenance_request.save()
+        return maintenance_request
 
 
 class PublicContactInquirySerializer(serializers.ModelSerializer):
