@@ -157,10 +157,10 @@ const copy: Record<Language, Copy> = {
       titleAccent: "",
       titleB: "من أول بلاغ حتى الإغلاق.",
       description:
-        "سجل البلاغ من الموقع، يصل فوراً للمنظومة، ثم تتابع الإدارة والمهندسون الحالة داخل الداش بورد بدون رسائل متفرقة أو فقدان للتفاصيل.",
-      primary: "تسجيل طلب صيانة",
-      secondary: "تتبع تذكرة",
-      dashboardTitle: "لوحة متابعة مباشرة",
+        "أرسل بلاغ الصيانة من هذه الصفحة، يصل مباشرة إلى فريق العمل، وتتابع حالته لحظة بلحظة حتى الإنجاز.",
+      primary: "تقديم طلب صيانة",
+      secondary: "تتبع طلب سابق",
+      dashboardTitle: "لوحة المتابعة المباشرة",
       live: "متصل",
       ticketsToday: "طلبات اليوم",
       avgResponse: "متوسط الاستجابة",
@@ -168,27 +168,27 @@ const copy: Record<Language, Copy> = {
     },
     services: {
       eyebrow: "تخصصات موحدة",
-      title: "كل فرق الصيانة تعمل على نفس المسار",
-      description: "كهرباء، تكييف، شبكات، أمن سيبراني، وكل طلب يظهر بالحالة والأولوية داخل لوحة واحدة."
+      title: "جميع فرق الصيانة تعمل ضمن مسار واحد",
+      description: "كهرباء، تكييف، شبكات، أمن سيبراني — كل طلب يُتابع بالحالة والأولوية من مكان واحد."
     },
     workflow: {
       eyebrow: "آلية العمل",
-      title: "تسلسل واضح لا يسمح بالفوضى",
-      description: "كل انتقال حالة محفوظ، وكل طلب يحمل دليله وتاريخه من التسجيل حتى الإغلاق."
+      title: "مسار منظّم من التسجيل حتى الإغلاق",
+      description: "كل خطوة موثّقة، وكل طلب يحمل سجلّه الكامل من لحظة تقديمه حتى إتمامه."
     },
     stats: {
-      eyebrow: "مؤشرات عامة",
-      title: "قراءة سريعة من النظام",
+      eyebrow: "إحصائيات عامة",
+      title: "نظرة سريعة على أداء المنظومة",
       total: "إجمالي الطلبات",
-      open: "طلبات مفتوحة",
+      open: "طلبات قيد المعالجة",
       completed: "طلبات مكتملة",
       rate: "نسبة الإنجاز"
     },
     request: {
-      eyebrow: "طلب عام",
-      title: "سجل طلب صيانة ليظهر داخل الداش بورد",
+      eyebrow: "تقديم طلب جديد",
+      title: "تقديم طلب صيانة",
       description:
-        "املأ البيانات بالطريقة التي تناسبك. سيقوم النظام بإنشاء شركة عند الحاجة ثم يضيف الطلب بحالة جديد داخل المنظومة.",
+        "أدخل بيانات شركتك وتفاصيل العطل، وسيتم تسجيل الطلب تلقائيًا في المنظومة وتعيين رقم تذكرة لمتابعته.",
       companyName: "اسم الشركة",
       contactName: "اسم المسؤول",
       commercialRegister: "السجل التجاري",
@@ -200,23 +200,23 @@ const copy: Record<Language, Copy> = {
       location: "موقع العطل",
       preferredDate: "الموعد المفضل",
       details: "تفاصيل الطلب",
-      hazardous: "البلاغ يحتوي خطورة تشغيلية",
-      submit: "إرسال الطلب للمنظومة",
-      submitting: "جاري إنشاء الطلب...",
-      success: "تم إنشاء الطلب بنجاح. احتفظ برقم التذكرة للتتبع.",
+      hazardous: "يتضمن هذا البلاغ خطورة تشغيلية",
+      submit: "إرسال الطلب",
+      submitting: "جارٍ إرسال الطلب...",
+      success: "تم تسجيل طلبك بنجاح. يرجى الاحتفاظ برقم التذكرة لمتابعة حالة الطلب.",
       ticket: "رقم التذكرة",
-      error: "تعذر إنشاء الطلب. راجع البيانات أو إعداد CORS في باك إند PythonAnywhere."
+      error: "تعذّر إرسال الطلب. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى."
     },
     track: {
-      title: "تتبع تذكرة عامة",
-      description: "أدخل رقم التذكرة الذي ظهر بعد إرسال الطلب.",
+      title: "متابعة طلب سابق",
+      description: "أدخل رقم التذكرة لمعرفة حالة طلبك.",
       ticketPlaceholder: "مثال: 24",
-      submit: "تتبع الآن",
-      loading: "جاري البحث...",
-      error: "لم يتم العثور على هذه التذكرة.",
+      submit: "استعلام",
+      loading: "جارٍ البحث...",
+      error: "لم يتم العثور على تذكرة بهذا الرقم.",
       status: "الحالة"
     },
-    footer: "منصة عامة وداشبورد تشغيلي لإدارة الصيانة المؤسسية."
+    footer: "منصة متكاملة لإدارة طلبات الصيانة المؤسسية ومتابعتها."
   },
   en: {
     dir: "ltr",
@@ -231,42 +231,42 @@ const copy: Record<Language, Copy> = {
     },
     hero: {
       eyebrow: "Operational maintenance platform for companies",
-      titleA: "Calm maintenance",
+      titleA: "Clear maintenance",
       titleAccent: "",
       titleB: "from first report to closure.",
       description:
-        "Create a request from the public site, send it straight into the system, and let admins and engineers manage it in the dashboard without scattered messages.",
-      primary: "Create maintenance request",
-      secondary: "Track ticket",
+        "Submit your maintenance request from this page. It reaches the team instantly, and you can track its progress every step of the way.",
+      primary: "Submit a request",
+      secondary: "Track a request",
       dashboardTitle: "Live operations view",
       live: "Live",
-      ticketsToday: "Today tickets",
+      ticketsToday: "Today's tickets",
       avgResponse: "Avg response",
       quality: "Quality review"
     },
     services: {
       eyebrow: "Unified specialties",
-      title: "Every maintenance team follows the same path",
-      description: "Electricity, HVAC, networks, cybersecurity, and every request appears with status and priority in one console."
+      title: "All maintenance teams operate on a single workflow",
+      description: "Electrical, HVAC, networking, cybersecurity — every request is tracked by status and priority in one place."
     },
     workflow: {
       eyebrow: "Workflow",
-      title: "A strict flow without operational noise",
-      description: "Every state transition is recorded, and every ticket keeps its evidence and history until closure."
+      title: "A structured path from submission to completion",
+      description: "Every step is documented, and every request carries its full history from the moment it is submitted."
     },
     stats: {
-      eyebrow: "Public stats",
-      title: "A quick system preview",
+      eyebrow: "Performance overview",
+      title: "A quick look at system performance",
       total: "Total requests",
-      open: "Open requests",
+      open: "In progress",
       completed: "Completed",
       rate: "Completion rate"
     },
     request: {
-      eyebrow: "Public request",
-      title: "Create a maintenance request in the dashboard",
+      eyebrow: "New request",
+      title: "Submit a maintenance request",
       description:
-        "Fill the details in the way that fits your company. The system creates the company when needed and adds a new ticket to the workflow.",
+        "Enter your company details and describe the issue. A ticket number will be assigned automatically for tracking.",
       companyName: "Company name",
       contactName: "Contact person",
       commercialRegister: "Commercial register",
@@ -278,23 +278,23 @@ const copy: Record<Language, Copy> = {
       location: "Issue location",
       preferredDate: "Preferred date",
       details: "Request details",
-      hazardous: "This issue has operational risk",
-      submit: "Send request to system",
-      submitting: "Creating request...",
-      success: "Request created. Keep the ticket number for tracking.",
+      hazardous: "This issue involves operational risk",
+      submit: "Submit request",
+      submitting: "Submitting...",
+      success: "Your request has been submitted successfully. Please save your ticket number for future reference.",
       ticket: "Ticket number",
-      error: "Could not create the request. Check the fields or PythonAnywhere CORS settings."
+      error: "Unable to submit the request. Please check your details and try again."
     },
     track: {
-      title: "Track public ticket",
-      description: "Enter the ticket number returned after request creation.",
+      title: "Track a previous request",
+      description: "Enter your ticket number to check the status of your request.",
       ticketPlaceholder: "Example: 24",
-      submit: "Track now",
+      submit: "Look up",
       loading: "Searching...",
-      error: "Ticket was not found.",
+      error: "No ticket found with this number.",
       status: "Status"
     },
-    footer: "Public website and operations dashboard for enterprise maintenance management."
+    footer: "An integrated platform for managing and tracking enterprise maintenance requests."
   }
 };
 
