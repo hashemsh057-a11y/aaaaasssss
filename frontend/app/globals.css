@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -36,18 +36,18 @@ body {
     linear-gradient(135deg, rgba(13, 143, 122, 0.12), transparent 32%),
     linear-gradient(315deg, rgba(200, 77, 58, 0.12), transparent 30%),
     var(--bg);
-  font-family: Inter, Cairo, system-ui, sans-serif;
+  font-family: "IBM Plex Sans Arabic", Inter, system-ui, sans-serif;
   font-size: 15px;
   letter-spacing: 0;
   text-rendering: geometricPrecision;
 }
 
 body.font-cairo {
-  font-family: Cairo, Inter, system-ui, sans-serif;
+  font-family: "IBM Plex Sans Arabic", Inter, system-ui, sans-serif;
 }
 
 body.font-inter {
-  font-family: Inter, Cairo, system-ui, sans-serif;
+  font-family: Inter, "IBM Plex Sans Arabic", system-ui, sans-serif;
 }
 
 body[data-public-theme="dark"] {

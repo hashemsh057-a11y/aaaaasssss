@@ -154,7 +154,7 @@ const copy: Record<Language, Copy> = {
     hero: {
       eyebrow: "منصة صيانة تشغيلية للشركات",
       titleA: "صيانة واضحة",
-      titleAccent: "بألوان هادئة ومسار موثق",
+      titleAccent: "",
       titleB: "من أول بلاغ حتى الإغلاق.",
       description:
         "سجل البلاغ من الموقع، يصل فوراً للمنظومة، ثم تتابع الإدارة والمهندسون الحالة داخل الداش بورد بدون رسائل متفرقة أو فقدان للتفاصيل.",
@@ -232,7 +232,7 @@ const copy: Record<Language, Copy> = {
     hero: {
       eyebrow: "Operational maintenance platform for companies",
       titleA: "Calm maintenance",
-      titleAccent: "with tracked workflows",
+      titleAccent: "",
       titleB: "from first report to closure.",
       description:
         "Create a request from the public site, send it straight into the system, and let admins and engineers manage it in the dashboard without scattered messages.",
@@ -620,9 +620,13 @@ export function PublicLanding() {
               </span>
               <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-normal text-[#17312d] md:text-5xl">
                 {t.hero.titleA}{" "}
-                <span className="bg-gradient-to-r from-[#0f8d86] to-[#4aa9c1] bg-clip-text text-transparent">
-                  {t.hero.titleAccent}
-                </span>{" "}
+                {t.hero.titleAccent && (
+                  <>
+                    <span className="bg-gradient-to-r from-[#0f8d86] to-[#4aa9c1] bg-clip-text text-transparent">
+                      {t.hero.titleAccent}
+                    </span>{" "}
+                  </>
+                )}
                 {t.hero.titleB}
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-[#5d716b] md:text-lg">{t.hero.description}</p>
