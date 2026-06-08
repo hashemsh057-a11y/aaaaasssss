@@ -18,6 +18,21 @@ const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "maintenance_access_token";
 const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
 
+/**
+ * Ensures every Django endpoint URL ends with a trailing slash.
+ * Django's APPEND_SLASH + SECURE_SSL_REDIRECT will issue a 301 redirect
+ * when a slash is missing, which converts POST -> GET on the redirected
+ * request and yields a 405 Method Not Allowed on create endpoints.
+ */
+function withTrailingSlash(path: string): string {
+  const [pathname, query = ""] = path.split("?");
+  if (pathname.endsWith("/")) {
+    return path;
+  }
+  const normalized = `${pathname}/`;
+  return query ? `${normalized}?${query}` : normalized;
+}
+
 type RequestOptions = RequestInit & {
   retryOnUnauthorized?: boolean;
 };
@@ -87,7 +102,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     headers.set("Authorization", `Bearer ${tokens.access}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${withTrailingSlash(path)}`, {
     ...options,
     headers
   });

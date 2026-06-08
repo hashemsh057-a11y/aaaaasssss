@@ -156,6 +156,7 @@ class PublicRequestTrackingAPIView(APIView):
 
 class PublicMaintenanceRequestCreateAPIView(APIView):
     permission_classes = [AllowAny]
+    http_method_names = ["post", "options"]
 
     def post(self, request):
         serializer = PublicMaintenanceRequestCreateSerializer(data=request.data)
