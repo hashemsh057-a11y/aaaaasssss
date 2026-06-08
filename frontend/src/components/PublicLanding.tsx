@@ -8,9 +8,10 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
+  Cog,
   Globe2,
+  HardHat,
   Loader2,
-  LockKeyhole,
   Mail,
   MapPin,
   Menu,
@@ -19,6 +20,8 @@ import {
   Search,
   ShieldCheck,
   Snowflake,
+  Trash2,
+  UserPlus,
   Wrench,
   X,
   Zap,
@@ -48,11 +51,13 @@ type RequestFormState = Omit<PublicMaintenanceRequestPayload, "preferred_date"> 
 type Copy = {
   dir: "rtl" | "ltr";
   brand: string;
+  tagline: string;
   nav: {
     services: string;
     workflow: string;
     request: string;
     stats: string;
+    engineers: string;
     login: string;
     language: string;
   };
@@ -87,6 +92,19 @@ type Copy = {
     open: string;
     completed: string;
     rate: string;
+  };
+  engineers: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    name: string;
+    phone: string;
+    specialty: string;
+    submit: string;
+    listTitle: string;
+    countLabel: string;
+    empty: string;
+    remove: string;
   };
   request: {
     eyebrow: string;
@@ -142,12 +160,14 @@ type WorkflowItem = {
 const copy: Record<Language, Copy> = {
   ar: {
     dir: "rtl",
-    brand: "الصيانة الذكية",
+    brand: "إنجي فلو",
+    tagline: "خطّط. أدِر. أنجز.",
     nav: {
       services: "الخدمات",
       workflow: "المسار",
       request: "تسجيل طلب",
       stats: "المؤشرات",
+      engineers: "المهندسون",
       login: "دخول النظام",
       language: "English"
     },
@@ -183,6 +203,19 @@ const copy: Record<Language, Copy> = {
       open: "طلبات قيد المعالجة",
       completed: "طلبات مكتملة",
       rate: "نسبة الإنجاز"
+    },
+    engineers: {
+      eyebrow: "فريق العمل",
+      title: "إضافة مهندس إلى الفريق",
+      description: "أضف بيانات المهندس الأساسية ليظهر ضمن قائمة فريق الصيانة. تُحفظ البيانات على هذا المتصفح.",
+      name: "اسم المهندس",
+      phone: "رقم الهاتف",
+      specialty: "التخصص",
+      submit: "إضافة المهندس",
+      listTitle: "قائمة المهندسين",
+      countLabel: "مهندس",
+      empty: "لا يوجد مهندسون مضافون بعد. ابدأ بإضافة أول مهندس إلى الفريق.",
+      remove: "حذف المهندس"
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -220,12 +253,14 @@ const copy: Record<Language, Copy> = {
   },
   en: {
     dir: "ltr",
-    brand: "Smart Maintenance",
+    brand: "EngiFlow",
+    tagline: "Plan. Manage. Achieve.",
     nav: {
       services: "Services",
       workflow: "Workflow",
       request: "Create Request",
       stats: "Stats",
+      engineers: "Engineers",
       login: "System Login",
       language: "العربية"
     },
@@ -261,6 +296,19 @@ const copy: Record<Language, Copy> = {
       open: "In progress",
       completed: "Completed",
       rate: "Completion rate"
+    },
+    engineers: {
+      eyebrow: "Our team",
+      title: "Add an engineer to the team",
+      description: "Add an engineer's core details to list them on the maintenance team. Entries are saved on this browser.",
+      name: "Engineer name",
+      phone: "Phone number",
+      specialty: "Specialty",
+      submit: "Add engineer",
+      listTitle: "Engineers list",
+      countLabel: "engineers",
+      empty: "No engineers added yet. Add the first engineer to the team.",
+      remove: "Remove engineer"
     },
     request: {
       eyebrow: "New request",
@@ -394,6 +442,38 @@ const statusLabels: Record<MaintenanceStatus, Record<Language, string>> = {
   CLOSED: { ar: "مغلق", en: "Closed" }
 };
 
+type StoredEngineer = {
+  id: string;
+  name: string;
+  phone: string;
+  specialty: MaintenanceSpecialty;
+};
+
+const ENGINEERS_STORAGE_KEY = "engiflow_engineers";
+
+function loadStoredEngineers(): StoredEngineer[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(ENGINEERS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as StoredEngineer[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function createEngineerId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `eng-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function defaultPreferredDate() {
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -507,6 +587,7 @@ export function PublicLanding() {
   const navLinks = [
     { href: "#services", label: t.nav.services },
     { href: "#workflow", label: t.nav.workflow },
+    { href: "#engineers", label: t.nav.engineers },
     { href: "#stats", label: t.nav.stats },
     { href: "#request", label: t.nav.request }
   ];
@@ -525,11 +606,8 @@ export function PublicLanding() {
     >
       <nav className="sticky top-0 z-50 border-b border-white/70 bg-[#fbfdf9]/80 backdrop-blur-2xl">
         <div className="container mx-auto flex min-h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
-          <a href="/" className="flex min-w-0 items-center gap-3 text-[#18332e] no-underline">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e4f5f4] text-[#0d827a] shadow-sm">
-              <ShieldCheck className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <span className="truncate text-lg font-extrabold tracking-normal sm:text-xl">{t.brand}</span>
+          <a href="/" className="flex min-w-0 items-center no-underline">
+            <BrandWordmark language={language} />
           </a>
 
           <div className="hidden items-center gap-8 text-sm font-bold text-[#61736e] md:flex">
@@ -550,11 +628,10 @@ export function PublicLanding() {
               {t.nav.language}
             </button>
             <a
-              href="/login"
+              href="#request"
               className="hidden h-11 items-center gap-2 rounded-full bg-[#0f8d86] px-5 text-sm font-extrabold text-white no-underline shadow-lg shadow-[#0f8d86]/20 transition-all hover:-translate-y-0.5 hover:bg-[#0d7b75] sm:inline-flex"
             >
-              <LockKeyhole className="h-4 w-4" aria-hidden="true" />
-              {t.nav.login}
+              {t.hero.primary}
             </a>
             <button
               type="button"
@@ -579,7 +656,7 @@ export function PublicLanding() {
               className={`absolute top-0 h-full w-[min(86vw,320px)] bg-[#fbfdf9] p-5 shadow-2xl ${isRtl ? "right-0" : "left-0"}`}
             >
               <div className="mb-8 flex items-center justify-between">
-                <strong className="text-lg text-[#18332e]">{t.brand}</strong>
+                <BrandWordmark language={language} />
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
@@ -600,8 +677,12 @@ export function PublicLanding() {
                     {link.label}
                   </a>
                 ))}
-                <a href="/login" className="mt-2 rounded-2xl bg-[#0f8d86] px-4 py-4 text-center font-extrabold text-white no-underline">
-                  {t.nav.login}
+                <a
+                  href="#request"
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-2 rounded-2xl bg-[#0f8d86] px-4 py-4 text-center font-extrabold text-white no-underline"
+                >
+                  {t.hero.primary}
                 </a>
               </div>
             </motion.aside>
@@ -765,6 +846,8 @@ export function PublicLanding() {
             </div>
           </div>
         </section>
+
+        <EngineersSection copy={t} language={language} />
 
         <section id="stats" className="bg-[#eef7f6] py-20">
           <div className="container mx-auto px-4 sm:px-6">
@@ -932,12 +1015,12 @@ export function PublicLanding() {
       </main>
 
       <footer className="bg-[#fbfdf9] py-10">
-        <div className="container mx-auto flex flex-col justify-between gap-5 px-4 text-sm text-[#657872] sm:px-6 md:flex-row">
-          <strong className="text-[#17312d]">{t.brand}</strong>
-          <p className="m-0">{t.footer}</p>
-          <a href="/login" className="font-extrabold text-[#0d827a] no-underline">
-            {t.nav.login}
-          </a>
+        <div className="container mx-auto flex flex-col items-start justify-between gap-5 px-4 text-sm text-[#657872] sm:px-6 md:flex-row md:items-center">
+          <div className="flex flex-col gap-1">
+            <BrandWordmark language={language} />
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9aaba5]">{t.tagline}</span>
+          </div>
+          <p className="m-0 max-w-md">{t.footer}</p>
         </div>
       </footer>
 
@@ -1009,6 +1092,178 @@ export function PublicLanding() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function BrandWordmark({ language }: { language: Language }) {
+  return (
+    <span className="flex items-center gap-2.5 text-start">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#15294d] via-[#1b3a6b] to-[#1f86ec] text-white shadow-sm">
+        <Cog className="h-6 w-6" aria-hidden="true" />
+      </span>
+      <span className="leading-none">
+        <span className="block text-xl font-extrabold tracking-tight sm:text-2xl">
+          <span className="text-[#15294d]">Engi</span>
+          <span className="text-[#1f86ec]">Flow</span>
+        </span>
+        {language === "ar" && (
+          <span className="mt-1 block text-[11px] font-bold tracking-wide text-[#7088a0]">إنجي فلو</span>
+        )}
+      </span>
+    </span>
+  );
+}
+
+function EngineersSection({ copy: t, language }: { copy: Copy; language: Language }) {
+  const isRtl = t.dir === "rtl";
+  const [engineers, setEngineers] = useState<StoredEngineer[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [specialty, setSpecialty] = useState<MaintenanceSpecialty>("ELECTRICITY");
+
+  useEffect(() => {
+    setEngineers(loadStoredEngineers());
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(ENGINEERS_STORAGE_KEY, JSON.stringify(engineers));
+    } catch {
+      /* ignore storage write failures */
+    }
+  }, [engineers, loaded]);
+
+  function handleAdd(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedName || !trimmedPhone) {
+      return;
+    }
+    setEngineers((previous) => [
+      { id: createEngineerId(), name: trimmedName, phone: trimmedPhone, specialty },
+      ...previous
+    ]);
+    setName("");
+    setPhone("");
+  }
+
+  function handleRemove(id: string) {
+    setEngineers((previous) => previous.filter((engineer) => engineer.id !== id));
+  }
+
+  return (
+    <section id="engineers" className="bg-[#fbfdf9] py-20 sm:py-24">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mx-auto mb-12 max-w-3xl text-center">
+          <span className="text-sm font-extrabold text-[#0d827a]">{t.engineers.eyebrow}</span>
+          <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.engineers.title}</h2>
+          <p className="mt-4 text-base leading-8 text-[#657872]">{t.engineers.description}</p>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <form
+            onSubmit={handleAdd}
+            className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7"
+          >
+            <div className="grid gap-5">
+              <Field label={t.engineers.name} icon={HardHat}>
+                <input
+                  required
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="public-input"
+                />
+              </Field>
+              <Field label={t.engineers.phone} icon={Phone}>
+                <input
+                  required
+                  type="tel"
+                  dir="ltr"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  className="public-input text-start"
+                />
+              </Field>
+              <Field label={t.engineers.specialty} icon={Wrench}>
+                <select
+                  value={specialty}
+                  onChange={(event) => setSpecialty(event.target.value as MaintenanceSpecialty)}
+                  className="public-input"
+                >
+                  {specialtyChoices.map((choice) => (
+                    <option key={choice.value} value={choice.value}>
+                      {language === "ar" ? choice.ar : choice.en}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <button
+              type="submit"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75]"
+            >
+              <UserPlus className="h-5 w-5" aria-hidden="true" />
+              {t.engineers.submit}
+            </button>
+          </form>
+
+          <div>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg font-extrabold text-[#17312d]">{t.engineers.listTitle}</h3>
+              <span className="rounded-full bg-[#e5f7f6] px-3 py-1 text-sm font-extrabold text-[#0d827a]">
+                {engineers.length} {t.engineers.countLabel}
+              </span>
+            </div>
+
+            {engineers.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-10 text-center text-sm leading-7 text-[#657872]">
+                {t.engineers.empty}
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {engineers.map((engineer) => (
+                  <div
+                    key={engineer.id}
+                    className="flex items-center justify-between gap-4 rounded-3xl bg-[#f4faf8] p-4 transition-colors hover:bg-[#eef8f7]"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                        <HardHat className="h-6 w-6" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <strong className="block truncate text-[#17312d]">{engineer.name}</strong>
+                        <span className="block truncate text-sm text-[#657872]">
+                          {getSpecialtyName(engineer.specialty, language)}
+                        </span>
+                        <span dir="ltr" className={`block truncate text-sm font-bold text-[#0d827a] ${isRtl ? "text-right" : "text-left"}`}>
+                          {engineer.phone}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(engineer.id)}
+                      aria-label={t.engineers.remove}
+                      title={t.engineers.remove}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#c84d3a] shadow-sm transition-colors hover:bg-[#fdecea]"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

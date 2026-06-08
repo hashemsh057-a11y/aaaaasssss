@@ -37,7 +37,7 @@ export const statusLabels: Record<MaintenanceStatus, Record<Language, string>> =
 
 export const copy = {
   en: {
-    appName: "Smart Maintenance",
+    appName: "EngiFlow",
     console: "Operations console",
     username: "Username",
     password: "Password",
@@ -85,7 +85,7 @@ export const copy = {
     minutes: "min"
   },
   ar: {
-    appName: "الصيانة الذكية",
+    appName: "إنجي فلو",
     console: "لوحة العمليات",
     username: "اسم المستخدم",
     password: "كلمة المرور",

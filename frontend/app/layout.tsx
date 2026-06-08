@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Smart Maintenance Platform",
-  description: "Public website and dashboard for smart maintenance workflow management"
+  title: "EngiFlow — Plan. Manage. Achieve.",
+  description: "EngiFlow — منصة إدارة ومتابعة طلبات الصيانة المؤسسية"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
