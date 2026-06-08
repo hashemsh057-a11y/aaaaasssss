@@ -355,6 +355,29 @@ class RequestEvidence(models.Model):
             raise ValidationError({"stage": "After-execution evidence requires a completed or closed request."})
 
 
+class PublicEngineer(models.Model):
+    """Lightweight engineer directory entry registered from the public site.
+
+    Captures only the basics (name, phone, specialty) so engineers can be
+    listed without provisioning a full authenticated EngineerProfile/User.
+    """
+
+    name = models.CharField(max_length=120)
+    phone = models.CharField(max_length=20, validators=[phone_validator])
+    specialty = models.CharField(max_length=32, choices=MaintenanceSpecialty.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["specialty"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.specialty}"
+
+
 class PublicContactInquiry(models.Model):
     class Status(models.TextChoices):
         NEW = "NEW", "New"

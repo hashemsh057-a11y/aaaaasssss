@@ -25,6 +25,7 @@ import {
   getDashboardStatistics,
   getEngineers,
   getMaintenanceRequests,
+  getPublicEngineers,
   loadTokens,
   login,
   transitionMaintenanceRequest
@@ -45,6 +46,7 @@ import type {
   Language,
   MaintenanceRequest,
   MaintenanceStatus,
+  PublicEngineer,
   RequestCreatePayload,
   User,
   UserRole
@@ -86,6 +88,7 @@ export function MaintenanceConsole() {
   const [dashboard, setDashboard] = useState<DashboardStatistics | null>(null);
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [engineers, setEngineers] = useState<EngineerProfile[]>([]);
+  const [publicEngineers, setPublicEngineers] = useState<PublicEngineer[]>([]);
   const [activeView, setActiveView] = useState<"dashboard" | "requests">("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -104,14 +107,16 @@ export function MaintenanceConsole() {
   }, [direction, language]);
 
   async function loadWorkspace(currentUser: User) {
-    const [statistics, maintenanceRequests, engineerProfiles] = await Promise.all([
+    const [statistics, maintenanceRequests, engineerProfiles, publicEngineerList] = await Promise.all([
       getDashboardStatistics(),
       getMaintenanceRequests(),
-      hasWorkflowControl(currentUser) ? getEngineers() : Promise.resolve([])
+      hasWorkflowControl(currentUser) ? getEngineers() : Promise.resolve([]),
+      getPublicEngineers().catch(() => [] as PublicEngineer[])
     ]);
     setDashboard(statistics);
     setRequests(maintenanceRequests);
     setEngineers(engineerProfiles);
+    setPublicEngineers(publicEngineerList);
   }
 
   useEffect(() => {
@@ -179,6 +184,7 @@ export function MaintenanceConsole() {
     setDashboard(null);
     setRequests([]);
     setEngineers([]);
+    setPublicEngineers([]);
     setError(null);
   }
 
@@ -284,7 +290,7 @@ export function MaintenanceConsole() {
         )}
 
         {activeView === "dashboard" ? (
-          <DashboardView dashboard={dashboard} language={language} requests={requests} />
+          <DashboardView dashboard={dashboard} language={language} requests={requests} publicEngineers={publicEngineers} />
         ) : (
           <RequestsView
             user={user}
@@ -408,11 +414,13 @@ function LoginPanel({
 function DashboardView({
   dashboard,
   language,
-  requests
+  requests,
+  publicEngineers
 }: {
   dashboard: DashboardStatistics | null;
   language: Language;
   requests: MaintenanceRequest[];
+  publicEngineers: PublicEngineer[];
 }) {
   const t = copy[language];
   const total = requests.length;
@@ -469,6 +477,28 @@ function DashboardView({
             <p className="empty-state">{t.noFastestEngineer}</p>
           )}
         </div>
+      </section>
+
+      <section className="issue-stream">
+        <div className="section-heading">
+          <UserRoundCog aria-hidden="true" />
+          <h2>
+            {t.registeredEngineers} ({publicEngineers.length})
+          </h2>
+        </div>
+        {publicEngineers.length === 0 ? (
+          <p className="empty-state">{t.noEngineers}</p>
+        ) : (
+          <div className="issue-bars">
+            {publicEngineers.map((engineer) => (
+              <div className="issue-bar" key={engineer.id}>
+                <span>{engineer.name}</span>
+                <span>{getSpecialtyLabel(engineer.specialty, language)}</span>
+                <strong dir="ltr">{engineer.phone}</strong>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

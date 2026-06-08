@@ -13,6 +13,7 @@ from .models import (
     MaintenanceRequest,
     MaintenanceSpecialty,
     PublicContactInquiry,
+    PublicEngineer,
     RequestEvidence,
     User,
     phone_validator,
@@ -464,6 +465,28 @@ class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(exc.message_dict if hasattr(exc, "message_dict") else exc.messages)
         maintenance_request.save()
         return maintenance_request
+
+
+class PublicEngineerSerializer(serializers.ModelSerializer):
+    specialty_display = serializers.CharField(source="get_specialty_display", read_only=True)
+
+    class Meta:
+        model = PublicEngineer
+        fields = ["id", "name", "phone", "specialty", "specialty_display", "created_at"]
+        read_only_fields = ["id", "specialty_display", "created_at"]
+
+    def validate_phone(self, value):
+        try:
+            phone_validator(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def validate_name(self, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Name is required.")
+        return cleaned
 
 
 class PublicContactInquirySerializer(serializers.ModelSerializer):

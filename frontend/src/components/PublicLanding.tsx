@@ -30,6 +30,9 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  createPublicEngineer,
+  deletePublicEngineer,
+  getPublicEngineers,
   getPublicImpactStatistics,
   submitPublicMaintenanceRequest,
   trackPublicRequest
@@ -39,6 +42,7 @@ import type {
   MaintenanceSpecialty,
   MaintenanceStatus,
   Priority,
+  PublicEngineer,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest
@@ -74,6 +78,7 @@ type Copy = {
     ticketsToday: string;
     avgResponse: string;
     quality: string;
+    noActivity: string;
   };
   services: {
     eyebrow: string;
@@ -101,10 +106,12 @@ type Copy = {
     phone: string;
     specialty: string;
     submit: string;
+    submitting: string;
     listTitle: string;
     countLabel: string;
     empty: string;
     remove: string;
+    error: string;
   };
   request: {
     eyebrow: string;
@@ -184,7 +191,8 @@ const copy: Record<Language, Copy> = {
       live: "متصل",
       ticketsToday: "طلبات اليوم",
       avgResponse: "متوسط الاستجابة",
-      quality: "مراجعة الجودة"
+      quality: "مراجعة الجودة",
+      noActivity: "لا توجد طلبات مسجّلة بعد"
     },
     services: {
       eyebrow: "تخصصات موحدة",
@@ -207,15 +215,17 @@ const copy: Record<Language, Copy> = {
     engineers: {
       eyebrow: "فريق العمل",
       title: "إضافة مهندس إلى الفريق",
-      description: "أضف بيانات المهندس الأساسية ليظهر ضمن قائمة فريق الصيانة. تُحفظ البيانات على هذا المتصفح.",
+      description: "أضف بيانات المهندس الأساسية لتُسجَّل في المنظومة وتظهر ضمن قائمة فريق الصيانة على كل الأجهزة.",
       name: "اسم المهندس",
       phone: "رقم الهاتف",
       specialty: "التخصص",
       submit: "إضافة المهندس",
+      submitting: "جارٍ الحفظ...",
       listTitle: "قائمة المهندسين",
       countLabel: "مهندس",
-      empty: "لا يوجد مهندسون مضافون بعد. ابدأ بإضافة أول مهندس إلى الفريق.",
-      remove: "حذف المهندس"
+      empty: "لا يوجد مهندسون مسجّلون بعد. ابدأ بإضافة أول مهندس إلى الفريق.",
+      remove: "حذف المهندس",
+      error: "تعذّر حفظ البيانات. تحقق من الاتصال وحاول مرة أخرى."
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -277,7 +287,8 @@ const copy: Record<Language, Copy> = {
       live: "Live",
       ticketsToday: "Today's tickets",
       avgResponse: "Avg response",
-      quality: "Quality review"
+      quality: "Quality review",
+      noActivity: "No requests recorded yet"
     },
     services: {
       eyebrow: "Unified specialties",
@@ -300,15 +311,17 @@ const copy: Record<Language, Copy> = {
     engineers: {
       eyebrow: "Our team",
       title: "Add an engineer to the team",
-      description: "Add an engineer's core details to list them on the maintenance team. Entries are saved on this browser.",
+      description: "Add an engineer's core details to register them in the system and list them for everyone across devices.",
       name: "Engineer name",
       phone: "Phone number",
       specialty: "Specialty",
       submit: "Add engineer",
+      submitting: "Saving...",
       listTitle: "Engineers list",
       countLabel: "engineers",
-      empty: "No engineers added yet. Add the first engineer to the team.",
-      remove: "Remove engineer"
+      empty: "No engineers registered yet. Add the first engineer to the team.",
+      remove: "Remove engineer",
+      error: "Could not save. Check your connection and try again."
     },
     request: {
       eyebrow: "New request",
@@ -442,38 +455,6 @@ const statusLabels: Record<MaintenanceStatus, Record<Language, string>> = {
   CLOSED: { ar: "مغلق", en: "Closed" }
 };
 
-type StoredEngineer = {
-  id: string;
-  name: string;
-  phone: string;
-  specialty: MaintenanceSpecialty;
-};
-
-const ENGINEERS_STORAGE_KEY = "engiflow_engineers";
-
-function loadStoredEngineers(): StoredEngineer[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem(ENGINEERS_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as StoredEngineer[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function createEngineerId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `eng-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function defaultPreferredDate() {
   const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -605,9 +586,9 @@ export function PublicLanding() {
       className="min-h-screen overflow-x-hidden bg-[#f7fbf8] text-[#1b2b27] selection:bg-[#c7eef0] selection:text-[#123532]"
     >
       <nav className="sticky top-0 z-50 border-b border-white/70 bg-[#fbfdf9]/80 backdrop-blur-2xl">
-        <div className="container mx-auto flex min-h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
+        <div dir="ltr" className="container mx-auto flex min-h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
           <a href="/" className="flex min-w-0 items-center no-underline">
-            <BrandWordmark language={language} />
+            <BrandWordmark />
           </a>
 
           <div className="hidden items-center gap-8 text-sm font-bold text-[#61736e] md:flex">
@@ -656,7 +637,7 @@ export function PublicLanding() {
               className={`absolute top-0 h-full w-[min(86vw,320px)] bg-[#fbfdf9] p-5 shadow-2xl ${isRtl ? "right-0" : "left-0"}`}
             >
               <div className="mb-8 flex items-center justify-between">
-                <BrandWordmark language={language} />
+                <BrandWordmark />
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
@@ -751,9 +732,9 @@ export function PublicLanding() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   {[
-                    { label: t.hero.ticketsToday, value: "18" },
-                    { label: t.hero.avgResponse, value: "24m" },
-                    { label: t.hero.quality, value: "96%" }
+                    { label: t.stats.total, value: impactStats ? numberFormat.format(impactStats.total_requests) : "—" },
+                    { label: t.stats.open, value: impactStats ? numberFormat.format(impactStats.total_open_requests) : "—" },
+                    { label: t.stats.rate, value: impactStats ? `${numberFormat.format(impactStats.completion_rate)}%` : "—" }
                   ].map((item) => (
                     <div key={item.label} className="rounded-3xl bg-[#f6fbfa] px-4 py-5">
                       <p className="m-0 truncate text-xs font-bold text-[#73847f]">{item.label}</p>
@@ -763,20 +744,31 @@ export function PublicLanding() {
                 </div>
 
                 <div className="mt-6 grid gap-4">
-                  {specialties.slice(0, 3).map((service, index) => {
-                    const width = ["w-10/12", "w-8/12", "w-6/12"][index];
-                    return (
-                      <div key={service.specialty} className="rounded-3xl bg-[#fbfdf9] p-4">
+                  {(() => {
+                    const issues = impactStats?.top_recurring_maintenance_issues ?? [];
+                    if (issues.length === 0) {
+                      return (
+                        <p className="m-0 rounded-3xl bg-[#fbfdf9] p-6 text-center text-sm font-bold text-[#8da09a]">
+                          {t.hero.noActivity}
+                        </p>
+                      );
+                    }
+                    const maxTotal = Math.max(...issues.map((issue) => issue.total), 1);
+                    return issues.slice(0, 3).map((issue) => (
+                      <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdf9] p-4">
                         <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#24433d]">
-                          <span>{getServiceTitle(service, language)}</span>
-                          <span className="text-[#8da09a]">0{index + 1}</span>
+                          <span>{getSpecialtyName(issue.issue_type, language)}</span>
+                          <span className="text-[#8da09a]">{numberFormat.format(issue.total)}</span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-[#e3eeee]">
-                          <span className={`block h-full rounded-full bg-[#0f8d86] ${width}`} />
+                          <span
+                            className="block h-full rounded-full bg-[#0f8d86]"
+                            style={{ width: `${Math.round((issue.total / maxTotal) * 100)}%` }}
+                          />
                         </div>
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               </div>
             </motion.div>
@@ -1017,7 +1009,7 @@ export function PublicLanding() {
       <footer className="bg-[#fbfdf9] py-10">
         <div className="container mx-auto flex flex-col items-start justify-between gap-5 px-4 text-sm text-[#657872] sm:px-6 md:flex-row md:items-center">
           <div className="flex flex-col gap-1">
-            <BrandWordmark language={language} />
+            <BrandWordmark />
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9aaba5]">{t.tagline}</span>
           </div>
           <p className="m-0 max-w-md">{t.footer}</p>
@@ -1095,20 +1087,15 @@ export function PublicLanding() {
   );
 }
 
-function BrandWordmark({ language }: { language: Language }) {
+function BrandWordmark() {
   return (
-    <span className="flex items-center gap-2.5 text-start">
+    <span dir="ltr" className="flex items-center gap-2.5">
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#15294d] via-[#1b3a6b] to-[#1f86ec] text-white shadow-sm">
         <Cog className="h-6 w-6" aria-hidden="true" />
       </span>
-      <span className="leading-none">
-        <span className="block text-xl font-extrabold tracking-tight sm:text-2xl">
-          <span className="text-[#15294d]">Engi</span>
-          <span className="text-[#1f86ec]">Flow</span>
-        </span>
-        {language === "ar" && (
-          <span className="mt-1 block text-[11px] font-bold tracking-wide text-[#7088a0]">إنجي فلو</span>
-        )}
+      <span className="text-xl font-extrabold leading-none tracking-tight sm:text-2xl">
+        <span className="text-[#15294d]">Engi</span>
+        <span className="text-[#1f86ec]">Flow</span>
       </span>
     </span>
   );
@@ -1116,45 +1103,60 @@ function BrandWordmark({ language }: { language: Language }) {
 
 function EngineersSection({ copy: t, language }: { copy: Copy; language: Language }) {
   const isRtl = t.dir === "rtl";
-  const [engineers, setEngineers] = useState<StoredEngineer[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [specialty, setSpecialty] = useState<MaintenanceSpecialty>("ELECTRICITY");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setEngineers(loadStoredEngineers());
-    setLoaded(true);
+    let active = true;
+    getPublicEngineers()
+      .then((data) => {
+        if (active) {
+          setEngineers(data);
+        }
+      })
+      .catch(() => {
+        /* ignore load errors (e.g. backend not yet reachable) */
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  useEffect(() => {
-    if (!loaded) {
-      return;
-    }
-    try {
-      window.localStorage.setItem(ENGINEERS_STORAGE_KEY, JSON.stringify(engineers));
-    } catch {
-      /* ignore storage write failures */
-    }
-  }, [engineers, loaded]);
-
-  function handleAdd(event: FormEvent<HTMLFormElement>) {
+  async function handleAdd(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
     if (!trimmedName || !trimmedPhone) {
       return;
     }
-    setEngineers((previous) => [
-      { id: createEngineerId(), name: trimmedName, phone: trimmedPhone, specialty },
-      ...previous
-    ]);
-    setName("");
-    setPhone("");
+    setSubmitting(true);
+    setError(null);
+    try {
+      const created = await createPublicEngineer({ name: trimmedName, phone: trimmedPhone, specialty });
+      setEngineers((previous) => [created, ...previous]);
+      setName("");
+      setPhone("");
+    } catch {
+      setError(t.engineers.error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function handleRemove(id: string) {
-    setEngineers((previous) => previous.filter((engineer) => engineer.id !== id));
+  async function handleRemove(id: number) {
+    const previous = engineers;
+    setEngineers((current) => current.filter((engineer) => engineer.id !== id));
+    setError(null);
+    try {
+      await deletePublicEngineer(id);
+    } catch {
+      setEngineers(previous);
+      setError(t.engineers.error);
+    }
   }
 
   return (
@@ -1205,12 +1207,21 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
               </Field>
             </div>
 
+            {error && (
+              <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75]"
+              disabled={submitting}
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <UserPlus className="h-5 w-5" aria-hidden="true" />
-              {t.engineers.submit}
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <UserPlus className="h-5 w-5" aria-hidden="true" />
+              )}
+              {submitting ? t.engineers.submitting : t.engineers.submit}
             </button>
           </form>
 

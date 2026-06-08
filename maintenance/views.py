@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
-from rest_framework import status, viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, User
+from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, PublicEngineer, User
 from .permissions import (
     CompanyProfilePermission,
     EngineerProfilePermission,
@@ -20,6 +20,7 @@ from .serializers import (
     EngineerProfileSerializer,
     MaintenanceRequestSerializer,
     PublicContactInquirySerializer,
+    PublicEngineerSerializer,
     PublicMaintenanceRequestCreateSerializer,
     PublicMaintenanceRequestTrackingSerializer,
     RequestEvidenceSerializer,
@@ -164,6 +165,19 @@ class PublicMaintenanceRequestCreateAPIView(APIView):
         maintenance_request = serializer.save()
         response_serializer = PublicMaintenanceRequestTrackingSerializer(maintenance_request)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PublicEngineerListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = PublicEngineerSerializer
+    queryset = PublicEngineer.objects.all()
+    pagination_class = None
+
+
+class PublicEngineerDeleteAPIView(generics.DestroyAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = PublicEngineerSerializer
+    queryset = PublicEngineer.objects.all()
 
 
 class PublicContactInquiryAPIView(APIView):

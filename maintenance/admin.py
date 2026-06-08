@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, PublicContactInquiry, RequestEvidence, User
+from .models import (
+    CompanyProfile,
+    EngineerProfile,
+    MaintenanceRequest,
+    PublicContactInquiry,
+    PublicEngineer,
+    RequestEvidence,
+    User,
+)
 
 
 @admin.register(User)
@@ -65,6 +73,14 @@ class RequestEvidenceAdmin(admin.ModelAdmin):
     search_fields = ("request__client_company__company_name", "uploaded_by__username", "uploaded_by__email")
     autocomplete_fields = ("request", "uploaded_by")
     readonly_fields = ("uploaded_at",)
+
+
+@admin.register(PublicEngineer)
+class PublicEngineerAdmin(admin.ModelAdmin):
+    list_display = ("name", "phone", "specialty", "created_at")
+    list_filter = ("specialty", "created_at")
+    search_fields = ("name", "phone")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(PublicContactInquiry)

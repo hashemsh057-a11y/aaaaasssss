@@ -5,6 +5,8 @@ import type {
   MaintenanceRequest,
   MaintenanceStatus,
   PublicContactPayload,
+  PublicEngineer,
+  PublicEngineerPayload,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest,
@@ -187,5 +189,22 @@ export function submitPublicMaintenanceRequest(payload: PublicMaintenanceRequest
   return apiFetch<PublicTrackedRequest>("/public/requests/", {
     method: "POST",
     body: JSON.stringify(payload)
+  });
+}
+
+export function getPublicEngineers() {
+  return apiFetch<PublicEngineer[]>("/public/engineers/");
+}
+
+export function createPublicEngineer(payload: PublicEngineerPayload) {
+  return apiFetch<PublicEngineer>("/public/engineers/", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deletePublicEngineer(id: number) {
+  return apiFetch<void>(`/public/engineers/${id}/`, {
+    method: "DELETE"
   });
 }

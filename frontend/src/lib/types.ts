@@ -133,6 +133,21 @@ export type PublicContactPayload = {
   message: string;
 };
 
+export type PublicEngineer = {
+  id: number;
+  name: string;
+  phone: string;
+  specialty: MaintenanceSpecialty;
+  specialty_display: string;
+  created_at: string;
+};
+
+export type PublicEngineerPayload = {
+  name: string;
+  phone: string;
+  specialty: MaintenanceSpecialty;
+};
+
 export type PublicMaintenanceRequestPayload = {
   contact_name: string;
   company_name: string;
