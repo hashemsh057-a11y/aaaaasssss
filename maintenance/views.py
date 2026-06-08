@@ -143,6 +143,19 @@ class PublicImpactStatisticsAPIView(APIView):
         return Response(payload)
 
 
+class PublicRequestListAPIView(generics.ListAPIView):
+    """Read-only public list of maintenance requests for the open dashboard.
+
+    Uses the tracking serializer, which exposes only non-sensitive fields
+    (company name, issue type, priority, status, dates) — no contact PII.
+    """
+
+    permission_classes = [AllowAny]
+    serializer_class = PublicMaintenanceRequestTrackingSerializer
+    queryset = MaintenanceRequest.objects.select_related("client_company").all()
+    pagination_class = None
+
+
 class PublicRequestTrackingAPIView(APIView):
     permission_classes = [AllowAny]
 

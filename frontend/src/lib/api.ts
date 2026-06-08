@@ -178,6 +178,10 @@ export function trackPublicRequest(ticketNumber: string) {
   return apiFetch<PublicTrackedRequest>(`/public/track/${encodeURIComponent(ticketNumber)}/`);
 }
 
+export function getPublicRequestsList() {
+  return apiFetch<PublicTrackedRequest[]>("/public/requests-list/");
+}
+
 export function submitPublicContactInquiry(payload: PublicContactPayload) {
   return apiFetch<{ id: number; created_at: string } & PublicContactPayload>("/public/contact/", {
     method: "POST",

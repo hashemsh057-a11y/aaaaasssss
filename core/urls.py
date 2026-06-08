@@ -17,6 +17,7 @@ from maintenance.views import (
     PublicEngineerListCreateAPIView,
     PublicImpactStatisticsAPIView,
     PublicMaintenanceRequestCreateAPIView,
+    PublicRequestListAPIView,
     PublicRequestTrackingAPIView,
     RequestEvidenceViewSet,
     UserViewSet,
@@ -42,6 +43,7 @@ urlpatterns = [
     path("api/public/engineers/<int:pk>/", PublicEngineerDeleteAPIView.as_view(), name="public-engineer-delete"),
     path("api/public/impact/", PublicImpactStatisticsAPIView.as_view(), name="public-impact-statistics"),
     path("api/public/requests/", PublicMaintenanceRequestCreateAPIView.as_view(), name="public-maintenance-request-create"),
+    path("api/public/requests-list/", PublicRequestListAPIView.as_view(), name="public-maintenance-request-list"),
     path("api/public/track/<int:ticket_number>/", PublicRequestTrackingAPIView.as_view(), name="public-request-tracking"),
     path("api/", include(router.urls)),
 ]
