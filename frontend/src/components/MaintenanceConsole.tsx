@@ -349,22 +349,26 @@ function LoginPanel({
   onLogin: (username: string, password: string) => Promise<void>;
 }) {
   const t = copy[language];
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("hashem");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(error);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function runLogin(nextUsername: string, nextPassword: string) {
     setSubmitting(true);
     setLoginError(null);
     try {
-      await onLogin(username.trim(), password);
+      await onLogin(nextUsername, nextPassword);
     } catch (authError) {
       setLoginError(normalizeError(authError, t.apiError));
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await runLogin(username.trim(), password);
   }
 
   return (
