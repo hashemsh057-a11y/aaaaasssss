@@ -359,7 +359,7 @@ function LoginPanel({
     setSubmitting(true);
     setLoginError(null);
     try {
-      await onLogin(username, password);
+      await onLogin(username.trim(), password);
     } catch (authError) {
       setLoginError(normalizeError(authError, t.apiError));
     } finally {
@@ -383,7 +383,17 @@ function LoginPanel({
         <form onSubmit={submit} className="login-form">
           <label>
             <span>{t.username}</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required />
+            <input
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              dir="ltr"
+              placeholder="hashem"
+              required
+            />
           </label>
           <label>
             <span>{t.password}</span>

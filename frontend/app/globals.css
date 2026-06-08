@@ -194,6 +194,24 @@ svg {
   gap: 12px;
 }
 
+/* Login fields — EngiFlow blue (visual deploy check) */
+.login-panel input {
+  border: 2px solid #1f86ec !important;
+  background: #e8f1ff !important;
+  color: #15294d !important;
+}
+
+.login-panel input::placeholder {
+  color: #6f8fc4;
+}
+
+.login-panel input:focus {
+  border-color: #1f86ec !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(31, 134, 236, 0.28) !important;
+  outline: 0;
+}
+
 label {
   display: grid;
   gap: 7px;
