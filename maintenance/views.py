@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
@@ -297,6 +299,74 @@ class PublicAdminRequestTransitionAPIView(APIView):
         from .serializers import PublicMaintenanceRequestTrackingSerializer
 
         return Response(PublicMaintenanceRequestTrackingSerializer(maintenance_request).data)
+
+
+class PublicAdminRequestCostAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, request_id):
+        maintenance_request = get_object_or_404(MaintenanceRequest, pk=request_id)
+        raw_cost = request.data.get("cost")
+        if raw_cost in (None, ""):
+            maintenance_request.cost = None
+        else:
+            try:
+                cost = Decimal(str(raw_cost))
+            except (InvalidOperation, TypeError, ValueError):
+                raise drf_serializers.ValidationError({"cost": "Cost must be a valid number."})
+            if cost < 0:
+                raise drf_serializers.ValidationError({"cost": "Cost must be zero or greater."})
+            maintenance_request.cost = cost
+
+        try:
+            maintenance_request.full_clean()
+        except DjangoValidationError as exc:
+            raise drf_serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            )
+        maintenance_request.save(update_fields=["cost", "updated_at"])
+        return Response(PublicMaintenanceRequestTrackingSerializer(maintenance_request).data)
+
+
+class PublicReportView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, kind):
+        from .reports.data import REPORT_KINDS, build_report
+        from .reports.excel import render_excel
+        from .reports.pdf import render_pdf
+
+        if kind not in REPORT_KINDS:
+            return Response({"detail": "Unknown report kind."}, status=status.HTTP_404_NOT_FOUND)
+
+        file_format = request.query_params.get("file_format", "pdf").lower()
+        if file_format not in {"pdf", "xlsx"}:
+            return Response(
+                {"detail": "Format must be pdf or xlsx."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            year = int(request.query_params["year"]) if request.query_params.get("year") else None
+            month = int(request.query_params["month"]) if request.query_params.get("month") else None
+            company_id = (
+                int(request.query_params["company_id"])
+                if request.query_params.get("company_id")
+                else None
+            )
+        except ValueError:
+            return Response(
+                {"detail": "year, month, and company_id must be integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if month is not None and not 1 <= month <= 12:
+            return Response({"detail": "month must be between 1 and 12."}, status=status.HTTP_400_BAD_REQUEST)
+        if year is not None and not 2000 <= year <= 2100:
+            return Response({"detail": "year must be between 2000 and 2100."}, status=status.HTTP_400_BAD_REQUEST)
+
+        report = build_report(kind, year=year, month=month, company_id=company_id)
+        return render_excel(report) if file_format == "xlsx" else render_pdf(report)
 
 
 class PublicContactInquiryAPIView(APIView):

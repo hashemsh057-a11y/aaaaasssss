@@ -169,6 +169,7 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
             "description",
             "preferred_date",
             "is_hazardous",
+            "cost",
             "status",
             "status_display",
             "assigned_engineer",
@@ -197,6 +198,7 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
             "rejected_at",
             "created_at",
             "updated_at",
+            "cost",
         ]
         extra_kwargs = {
             "client_company": {"required": False},
@@ -381,6 +383,7 @@ class PublicMaintenanceRequestTrackingSerializer(serializers.ModelSerializer):
             "rejected_at",
             "created_at",
             "updated_at",
+            "cost",
         ]
 
     def get_assigned_engineer_name(self, obj):

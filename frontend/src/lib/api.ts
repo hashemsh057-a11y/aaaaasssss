@@ -12,6 +12,8 @@ import type {
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest,
+  ReportFormat,
+  ReportKind,
   RequestCreatePayload,
   User
 } from "./types";
@@ -23,7 +25,7 @@ import type {
  * https URL instead of producing a 404 for every request.
  */
 function sanitizeApiBaseUrl(raw: string | undefined): string {
-  if (!raw) return "http://127.0.0.1:8000/api";
+  if (!raw) return "https://aaaaasssss.pythonanywhere.com/api";
   const trimmed = raw.trim();
   // Markdown-link form: [text](url) — extract the inner URL.
   const markdownMatch = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)]+)\)$/);
@@ -239,6 +241,27 @@ export function adminTransitionRequest(requestId: number, payload: AdminTransiti
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export function setRequestCost(requestId: number, cost: string | null) {
+  return apiFetch<PublicTrackedRequest>(`/public/admin/requests/${requestId}/cost/`, {
+    method: "POST",
+    body: JSON.stringify({ cost })
+  });
+}
+
+export function getReportUrl(
+  kind: ReportKind,
+  fileFormat: ReportFormat,
+  params: Record<string, string | number | undefined> = {}
+) {
+  const search = new URLSearchParams({ file_format: fileFormat });
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") {
+      search.set(key, String(value));
+    }
+  });
+  return `${API_BASE_URL}/public/reports/${kind}/?${search.toString()}`;
 }
 
 export function getPublicCompanies() {

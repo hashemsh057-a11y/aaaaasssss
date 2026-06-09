@@ -1,11 +1,21 @@
+from io import BytesIO
 from datetime import timedelta
 
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, MaintenanceSpecialty, PublicContactInquiry, User
+from .models import (
+    CompanyProfile,
+    EngineerProfile,
+    MaintenanceRequest,
+    MaintenanceSpecialty,
+    PublicContactInquiry,
+    PublicEngineer,
+    User,
+)
 
 
 class MaintenanceAPITestCase(APITestCase):
@@ -284,3 +294,64 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertEqual(maintenance_request.status, MaintenanceRequest.Status.NEW)
         self.assertEqual(maintenance_request.client_company.company_name, "New Facility Co")
         self.assertEqual(maintenance_request.client_company.user.role, User.Role.CLIENT_COMPANY)
+
+
+class PublicReportTests(MaintenanceAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.public_engineer = PublicEngineer.objects.create(
+            name="Ahmed Ali",
+            phone="+218 91 777 7777",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+        )
+        self.maintenance_request = self.create_request(
+            status=MaintenanceRequest.Status.COMPLETED,
+            assigned_public_engineer=self.public_engineer,
+            completed_at=timezone.now(),
+            cost="1250.50",
+        )
+
+    def test_admin_can_set_and_clear_request_cost(self):
+        url = reverse("public-admin-request-cost", args=[self.maintenance_request.id])
+
+        response = self.client.post(url, {"cost": "900.25"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["cost"], "900.25")
+
+        response = self.client.post(url, {"cost": None}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["cost"])
+
+    def test_negative_cost_is_rejected(self):
+        response = self.client.post(
+            reverse("public-admin-request-cost", args=[self.maintenance_request.id]),
+            {"cost": "-1"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_all_report_kinds_export_pdf_and_excel(self):
+        for kind in ["monthly", "company", "engineer", "recurring", "cost"]:
+            with self.subTest(kind=kind, file_format="pdf"):
+                response = self.client.get(reverse("public-report", args=[kind]), {"file_format": "pdf"})
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response["Content-Type"], "application/pdf")
+                self.assertTrue(response.content.startswith(b"%PDF"))
+
+            with self.subTest(kind=kind, file_format="xlsx"):
+                response = self.client.get(reverse("public-report", args=[kind]), {"file_format": "xlsx"})
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(
+                    response["Content-Type"],
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+                workbook = load_workbook(BytesIO(response.content), read_only=True)
+                self.assertGreaterEqual(len(workbook.sheetnames), 1)
+                self.assertTrue(workbook[workbook.sheetnames[0]]["A1"].value)
+
+    def test_invalid_report_parameters_return_bad_request(self):
+        response = self.client.get(
+            reverse("public-report", args=["monthly"]),
+            {"file_format": "csv", "month": "13"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

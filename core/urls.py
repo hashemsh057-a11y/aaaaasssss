@@ -12,6 +12,7 @@ from maintenance.views import (
     DashboardStatisticsAPIView,
     EngineerProfileViewSet,
     MaintenanceRequestViewSet,
+    PublicAdminRequestCostAPIView,
     PublicAdminRequestTransitionAPIView,
     PublicCompanyListAPIView,
     PublicContactInquiryAPIView,
@@ -19,6 +20,7 @@ from maintenance.views import (
     PublicEngineerListCreateAPIView,
     PublicImpactStatisticsAPIView,
     PublicMaintenanceRequestCreateAPIView,
+    PublicReportView,
     PublicRequestListAPIView,
     PublicRequestTrackingAPIView,
     RequestEvidenceViewSet,
@@ -52,6 +54,12 @@ urlpatterns = [
         PublicAdminRequestTransitionAPIView.as_view(),
         name="public-admin-request-transition",
     ),
+    path(
+        "api/public/admin/requests/<int:request_id>/cost/",
+        PublicAdminRequestCostAPIView.as_view(),
+        name="public-admin-request-cost",
+    ),
+    path("api/public/reports/<str:kind>/", PublicReportView.as_view(), name="public-report"),
     path("api/public/track/<int:ticket_number>/", PublicRequestTrackingAPIView.as_view(), name="public-request-tracking"),
     path("api/", include(router.urls)),
 ]

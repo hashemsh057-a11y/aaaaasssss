@@ -49,7 +49,16 @@ class RequestEvidenceInline(admin.TabularInline):
 
 @admin.register(MaintenanceRequest)
 class MaintenanceRequestAdmin(admin.ModelAdmin):
-    list_display = ("id", "client_company", "issue_type", "priority", "status", "assigned_engineer", "created_at")
+    list_display = (
+        "id",
+        "client_company",
+        "issue_type",
+        "priority",
+        "status",
+        "assigned_engineer",
+        "cost",
+        "created_at",
+    )
     list_filter = ("status", "priority", "issue_type", "is_hazardous", "created_at")
     search_fields = ("client_company__company_name", "location_details", "description", "assigned_engineer__employee_id")
     readonly_fields = (

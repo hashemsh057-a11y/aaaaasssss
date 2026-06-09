@@ -2,12 +2,15 @@
 
 import {
   AlertTriangle,
+  Banknote,
   BarChart3,
   Building2,
   CheckCircle2,
   ClipboardList,
   Globe2,
   HardHat,
+  FileSpreadsheet,
+  FileText,
   Loader2,
   LogOut,
   Mail,
@@ -16,6 +19,7 @@ import {
   Play,
   PlayCircle,
   RefreshCw,
+  Save,
   UserCheck,
   UserPlus,
   Users,
@@ -28,10 +32,12 @@ import type { ReactNode } from "react";
 import {
   adminTransitionRequest,
   createPublicEngineer,
+  getReportUrl,
   getPublicCompanies,
   getPublicEngineers,
   getPublicImpactStatistics,
-  getPublicRequestsList
+  getPublicRequestsList,
+  setRequestCost
 } from "@/src/lib/api";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
 import { DashboardLogin, useDashboardSession } from "./DashboardLogin";
@@ -42,7 +48,8 @@ import type {
   PublicCompany,
   PublicEngineer,
   PublicImpactStatistics,
-  PublicTrackedRequest
+  PublicTrackedRequest,
+  ReportKind
 } from "@/src/lib/types";
 
 type FetchState = "idle" | "loading" | "ready" | "error";
@@ -167,6 +174,11 @@ export function PublicDashboard() {
       ...(assignedPublicEngineerId ? { assigned_public_engineer_id: assignedPublicEngineerId } : {})
     });
     setRequests((current) => current.map((r) => (r.id === updated.id ? updated : r)));
+  }
+
+  async function handleCostUpdate(requestId: number, cost: string | null) {
+    const updated = await setRequestCost(requestId, cost);
+    setRequests((current) => current.map((request) => (request.id === updated.id ? updated : request)));
   }
 
   const recurring = stats?.top_recurring_maintenance_issues ?? [];
@@ -295,6 +307,8 @@ export function PublicDashboard() {
             />
           ))}
         </section>
+
+        <ReportsPanel t={t} companies={companies} />
 
         <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center gap-3">
@@ -459,6 +473,7 @@ export function PublicDashboard() {
                   language={language}
                   t={t}
                   onTransition={handleTransition}
+                  onCostUpdate={handleCostUpdate}
                 />
               ))}
             </div>
@@ -466,6 +481,126 @@ export function PublicDashboard() {
         </section>
       </main>
     </div>
+  );
+}
+
+function ReportsPanel({
+  t,
+  companies
+}: {
+  t: (typeof copy)[Language];
+  companies: PublicCompany[];
+}) {
+  const now = new Date();
+  const [kind, setKind] = useState<ReportKind>("monthly");
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [companyId, setCompanyId] = useState("");
+
+  const reportOptions: Array<{ value: ReportKind; label: string }> = [
+    { value: "monthly", label: t.monthlyReport },
+    { value: "company", label: t.companyReport },
+    { value: "engineer", label: t.engineerReport },
+    { value: "recurring", label: t.recurringReport },
+    { value: "cost", label: t.costReport }
+  ];
+  const params =
+    kind === "monthly"
+      ? { year: Number(year), month: Number(month) }
+      : kind === "company"
+        ? { company_id: companyId ? Number(companyId) : undefined }
+        : {};
+
+  return (
+    <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+      <div className="mb-5 flex items-center gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
+          <FileText className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.reports}</h2>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(220px,1.4fr)_minmax(180px,1fr)_auto] lg:items-end">
+        <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.reportType}</span>
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value as ReportKind)}
+            className="public-input"
+          >
+            {reportOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {kind === "monthly" && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-2 text-sm">
+              <span className="font-extrabold text-[#5b6b85]">{t.year}</span>
+              <input
+                type="number"
+                min="2000"
+                max="2100"
+                value={year}
+                onChange={(event) => setYear(event.target.value)}
+                className="public-input"
+              />
+            </label>
+            <label className="grid gap-2 text-sm">
+              <span className="font-extrabold text-[#5b6b85]">{t.month}</span>
+              <input
+                type="number"
+                min="1"
+                max="12"
+                value={month}
+                onChange={(event) => setMonth(event.target.value)}
+                className="public-input"
+              />
+            </label>
+          </div>
+        )}
+
+        {kind === "company" && (
+          <label className="grid gap-2 text-sm">
+            <span className="font-extrabold text-[#5b6b85]">{t.companyName}</span>
+            <select
+              value={companyId}
+              onChange={(event) => setCompanyId(event.target.value)}
+              className="public-input"
+            >
+              <option value="">{t.allCompanies}</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.company_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={getReportUrl(kind, "pdf", params)}
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-[#c84d3a] px-5 text-sm font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#a93f2f]"
+            title={t.downloadPdf}
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            {t.downloadPdf}
+          </a>
+          <a
+            href={getReportUrl(kind, "xlsx", params)}
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-[#2c8b4b] px-5 text-sm font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#236e3c]"
+            title={t.downloadExcel}
+          >
+            <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+            {t.downloadExcel}
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -583,19 +718,29 @@ function RequestCard({
   engineers,
   language,
   t,
-  onTransition
+  onTransition,
+  onCostUpdate
 }: {
   request: PublicTrackedRequest;
   engineers: PublicEngineer[];
   language: Language;
   t: (typeof copy)[Language];
   onTransition: (id: number, status: MaintenanceStatus, engineerId?: number) => Promise<void>;
+  onCostUpdate: (id: number, cost: string | null) => Promise<void>;
 }) {
   const [selectedEngineer, setSelectedEngineer] = useState<number | "">(
     request.assigned_public_engineer ?? ""
   );
   const [busy, setBusy] = useState<MaintenanceStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [costValue, setCostValue] = useState(request.cost ?? "");
+  const [costBusy, setCostBusy] = useState(false);
+  const [costError, setCostError] = useState<string | null>(null);
+  const [costSaved, setCostSaved] = useState(false);
+
+  useEffect(() => {
+    setCostValue(request.cost ?? "");
+  }, [request.cost]);
 
   // Engineers that match this request's specialty (the only valid assignees).
   const matchingEngineers = useMemo(
@@ -619,6 +764,20 @@ function RequestCard({
       setError(transitionError instanceof Error ? transitionError.message : t.transitionError);
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function saveCost() {
+    setCostBusy(true);
+    setCostError(null);
+    setCostSaved(false);
+    try {
+      await onCostUpdate(request.id, costValue.trim() || null);
+      setCostSaved(true);
+    } catch {
+      setCostError(t.costSaveError);
+    } finally {
+      setCostBusy(false);
     }
   }
 
@@ -655,6 +814,43 @@ function RequestCard({
           )}
         </div>
       )}
+
+      <div className="mt-4 flex flex-wrap items-end gap-3 border-y border-[#d7e4f5] py-4">
+        <label className="grid min-w-[180px] flex-1 gap-2 text-sm">
+          <span className="flex items-center gap-2 font-extrabold text-[#5b6b85]">
+            <Banknote className="h-4 w-4 text-[#1567c6]" aria-hidden="true" />
+            {t.maintenanceCost}
+          </span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={costValue}
+            onChange={(event) => {
+              setCostValue(event.target.value);
+              setCostSaved(false);
+            }}
+            className="public-input"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={saveCost}
+          disabled={costBusy}
+          className="inline-flex h-12 items-center gap-2 rounded-full bg-[#15294d] px-5 text-sm font-extrabold text-white transition-colors hover:bg-[#1c3263] disabled:cursor-not-allowed disabled:opacity-60"
+          title={t.save}
+        >
+          {costBusy ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Save className="h-4 w-4" aria-hidden="true" />
+          )}
+          {costBusy ? t.saving : t.save}
+        </button>
+        {costSaved && <span className="text-sm font-bold text-[#2c8b4b]">{t.costSaved}</span>}
+        {costError && <span className="text-sm font-bold text-[#c84d3a]">{costError}</span>}
+      </div>
 
       {!isTerminal && (
         <div className="mt-4 grid gap-3 rounded-2xl border border-dashed border-[#bfd2ee] bg-white p-4">

@@ -205,6 +205,14 @@ class MaintenanceRequest(models.Model):
     description = models.TextField()
     preferred_date = models.DateTimeField()
     is_hazardous = models.BooleanField(default=False)
+    cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Total maintenance cost in local currency.",
+    )
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.NEW)
     assigned_engineer = models.ForeignKey(
         EngineerProfile,

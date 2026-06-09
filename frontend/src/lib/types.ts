@@ -132,12 +132,16 @@ export type PublicTrackedRequest = {
   rejected_at: string | null;
   created_at: string;
   updated_at: string;
+  cost: string | null;
 };
 
 export type AdminTransitionPayload = {
   status: MaintenanceStatus;
   assigned_public_engineer_id?: number;
 };
+
+export type ReportKind = "monthly" | "company" | "engineer" | "recurring" | "cost";
+export type ReportFormat = "pdf" | "xlsx";
 
 export type PublicContactPayload = {
   contact_name: string;
