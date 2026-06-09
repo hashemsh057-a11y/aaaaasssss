@@ -5,18 +5,22 @@
 @tailwind utilities;
 
 :root {
-  --bg: #eef3f1;
-  --ink: #17201d;
-  --muted: #64716c;
-  --line: rgba(32, 48, 43, 0.14);
-  --glass: rgba(255, 255, 255, 0.72);
-  --glass-strong: rgba(255, 255, 255, 0.88);
-  --teal: #0d8f7a;
-  --green: #2c8b4b;
-  --amber: #b87512;
-  --coral: #c84d3a;
-  --graphite: #24302c;
-  --shadow: 0 24px 70px rgba(35, 48, 43, 0.16);
+  /* EngiFlow brand palette — blues/navy from the logo + clean white. */
+  --bg: #f4f8fd;
+  --ink: #15294d;
+  --muted: #5b6b85;
+  --line: rgba(21, 41, 77, 0.14);
+  --glass: rgba(255, 255, 255, 0.82);
+  --glass-strong: rgba(255, 255, 255, 0.94);
+  --teal: #1f86ec;     /* primary action / accent (logo blue) */
+  --primary: #1f86ec;
+  --primary-dark: #1567c6;
+  --navy: #15294d;     /* dark text / headings (logo navy) */
+  --green: #2e9d63;
+  --amber: #c98a1a;
+  --coral: #d9534f;
+  --graphite: #15294d;
+  --shadow: 0 24px 70px rgba(21, 41, 77, 0.14);
 }
 
 * {
@@ -33,7 +37,7 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    linear-gradient(135deg, rgba(13, 143, 122, 0.12), transparent 32%),
+    linear-gradient(135deg, rgba(31, 134, 236, 0.12), transparent 32%),
     linear-gradient(315deg, rgba(200, 77, 58, 0.12), transparent 30%),
     var(--bg);
   font-family: "IBM Plex Sans Arabic", Inter, system-ui, sans-serif;
@@ -98,7 +102,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(13, 143, 122, 0.25);
+  outline: 3px solid rgba(31, 134, 236, 0.25);
   outline-offset: 2px;
 }
 
@@ -128,9 +132,9 @@ svg {
   block-size: 48px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(13, 143, 122, 0.28);
+  border: 1px solid rgba(31, 134, 236, 0.28);
   border-radius: 8px;
-  background: rgba(13, 143, 122, 0.12);
+  background: rgba(31, 134, 236, 0.12);
   color: var(--teal);
   box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.38);
 }
@@ -143,11 +147,11 @@ svg {
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 rgba(13, 143, 122, 0);
+    box-shadow: 0 0 0 rgba(31, 134, 236, 0);
   }
   50% {
     transform: scale(1.04);
-    box-shadow: 0 0 28px rgba(13, 143, 122, 0.28);
+    box-shadow: 0 0 28px rgba(31, 134, 236, 0.28);
   }
 }
 
@@ -246,10 +250,10 @@ textarea {
 .public-input {
   inline-size: 100%;
   min-block-size: 48px;
-  border: 1px solid #d8e7e3;
+  border: 1px solid #c3d4ec;
   border-radius: 16px;
   background: rgba(251, 253, 249, 0.9);
-  color: #1b2b27;
+  color: #15294d;
   padding: 12px 14px;
   transition:
     border-color 220ms ease,
@@ -258,7 +262,7 @@ textarea {
 }
 
 .public-input:focus {
-  border-color: #0f8d86;
+  border-color: #1f86ec;
   background: white;
   box-shadow: 0 0 0 4px rgba(191, 236, 239, 0.48);
   outline: 0;
@@ -387,23 +391,23 @@ textarea {
   block-size: 7px;
   border-radius: 999px;
   background: transparent;
-  box-shadow: 0 0 0 rgba(13, 143, 122, 0);
+  box-shadow: 0 0 0 rgba(31, 134, 236, 0);
   transition: background-color 300ms ease, box-shadow 300ms ease;
 }
 
 .side-nav button:hover,
 .collapse-button:hover {
-  background: rgba(13, 143, 122, 0.08);
+  background: rgba(31, 134, 236, 0.08);
 }
 
 .side-nav button.active {
   color: var(--teal);
-  background: rgba(13, 143, 122, 0.1);
+  background: rgba(31, 134, 236, 0.1);
 }
 
 .side-nav button.active::before {
   background: var(--teal);
-  box-shadow: 0 0 16px rgba(13, 143, 122, 0.56);
+  box-shadow: 0 0 16px rgba(31, 134, 236, 0.56);
 }
 
 .collapse-button {
@@ -794,8 +798,8 @@ textarea {
 .status-assigned,
 .status-in-progress,
 .status-waiting-spare-parts {
-  color: #086657;
-  background: rgba(13, 143, 122, 0.16);
+  color: #15294d;
+  background: rgba(31, 134, 236, 0.16);
 }
 
 .status-completed,

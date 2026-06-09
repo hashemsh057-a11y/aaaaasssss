@@ -9,6 +9,7 @@ import {
   Globe2,
   HardHat,
   Loader2,
+  LogOut,
   Mail,
   MapPin,
   Phone,
@@ -33,6 +34,7 @@ import {
   getPublicRequestsList
 } from "@/src/lib/api";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
+import { DashboardLogin, useDashboardSession } from "./DashboardLogin";
 import type {
   Language,
   MaintenanceSpecialty,
@@ -95,6 +97,7 @@ function stageTimestamp(request: PublicTrackedRequest, stage: MaintenanceStatus)
 
 export function PublicDashboard() {
   const [language, setLanguage] = useState<Language>("ar");
+  const session = useDashboardSession();
   const [stats, setStats] = useState<PublicImpactStatistics | null>(null);
   const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
   const [companies, setCompanies] = useState<PublicCompany[]>([]);
@@ -195,13 +198,14 @@ export function PublicDashboard() {
     }
   ];
 
-  if (state === "loading") {
+  // Gate: show login until the operator authenticates (client-side check).
+  if (session.authenticated === null || state === "loading") {
     return (
       <main
         dir={dir}
-        className="grid min-h-screen place-items-center bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] px-4"
+        className="grid min-h-screen place-items-center bg-[linear-gradient(135deg,#eef4fc_0%,#dde9f9_55%,#f0f5fc_100%)] px-4"
       >
-        <div className="flex flex-col items-center gap-4 text-[#0d827a]">
+        <div className="flex flex-col items-center gap-4 text-[#1567c6]">
           <Loader2 className="h-10 w-10 animate-spin" aria-hidden="true" />
           <p className="m-0 text-base font-bold">{t.loading}</p>
         </div>
@@ -209,12 +213,22 @@ export function PublicDashboard() {
     );
   }
 
+  if (!session.authenticated) {
+    return (
+      <DashboardLogin
+        language={language}
+        onLanguageChange={setLanguage}
+        onAuthenticated={session.authenticate}
+      />
+    );
+  }
+
   return (
     <div
       dir={dir}
-      className="min-h-screen bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] pb-16 text-[#1b2b27]"
+      className="min-h-screen bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] pb-16 text-[#15294d]"
     >
-      <header className="sticky top-0 z-40 border-b border-white/70 bg-[#fbfdf9]/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/70 bg-[#fbfdff]/85 backdrop-blur-xl">
         <div className="container mx-auto flex min-h-[72px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <span dir="ltr" className="flex items-center gap-3">
             <img
@@ -233,7 +247,7 @@ export function PublicDashboard() {
             <button
               type="button"
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/85 px-4 text-sm font-bold text-[#46635d] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#edf8f7]"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/85 px-4 text-sm font-bold text-[#5b6b85] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#e3edfb]"
             >
               <Globe2 className="h-4 w-4" aria-hidden="true" />
               {language === "ar" ? "English" : "العربية"}
@@ -242,10 +256,19 @@ export function PublicDashboard() {
               type="button"
               onClick={refresh}
               disabled={refreshing}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#0f8d86] px-5 text-sm font-extrabold text-white shadow-lg shadow-[#0f8d86]/20 transition-all hover:-translate-y-0.5 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1f86ec] px-5 text-sm font-extrabold text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
               {t.refresh}
+            </button>
+            <button
+              type="button"
+              onClick={session.signOut}
+              title={language === "ar" ? "خروج" : "Sign out"}
+              aria-label={language === "ar" ? "خروج" : "Sign out"}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/85 text-[#d9534f] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -273,28 +296,28 @@ export function PublicDashboard() {
           ))}
         </section>
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a]">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
               <BarChart3 className="h-6 w-6" aria-hidden="true" />
             </span>
-            <h2 className="m-0 text-xl font-extrabold text-[#17312d]">{t.recurringIssues}</h2>
+            <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.recurringIssues}</h2>
           </div>
           {recurring.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-6 text-center text-sm text-[#657872]">
+            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
               {t.noRequests}
             </p>
           ) : (
             <div className="grid gap-4">
               {recurring.map((issue) => (
-                <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdf9] p-4">
-                  <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#24433d]">
+                <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdff] p-4">
+                  <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#1c3263]">
                     <span>{getSpecialtyLabel(issue.issue_type, language)}</span>
-                    <span className="text-[#8da09a]">{numberFormat.format(issue.total)}</span>
+                    <span className="text-[#7088a0]">{numberFormat.format(issue.total)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[#e3eeee]">
                     <span
-                      className="block h-full rounded-full bg-[#0f8d86]"
+                      className="block h-full rounded-full bg-[#1f86ec]"
                       style={{ width: `${Math.round((issue.total / maxTotal) * 100)}%` }}
                     />
                   </div>
@@ -310,21 +333,21 @@ export function PublicDashboard() {
           onAdded={(engineer) => setEngineers((current) => [engineer, ...current])}
         />
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a]">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
                 <HardHat className="h-6 w-6" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#17312d]">{t.registeredEngineers}</h2>
+              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.registeredEngineers}</h2>
             </div>
-            <span className="rounded-full bg-[#e5f7f6] px-3 py-1 text-sm font-extrabold text-[#0d827a]">
+            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
               {numberFormat.format(engineers.length)}
             </span>
           </div>
 
           {engineers.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-6 text-center text-sm text-[#657872]">
+            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
               {t.noEngineers}
             </p>
           ) : (
@@ -332,21 +355,21 @@ export function PublicDashboard() {
               {engineers.map((engineer) => (
                 <article
                   key={engineer.id}
-                  className="rounded-3xl bg-[#f6fbfa] p-4 transition-colors hover:bg-[#eef8f7]"
+                  className="rounded-3xl bg-[#f4f8fd] p-4 transition-colors hover:bg-[#e3edfb]"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
                       <HardHat className="h-6 w-6" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-base text-[#17312d]">{engineer.name}</strong>
-                      <span className="block truncate text-sm text-[#5d716b]">
+                      <strong className="block truncate text-base text-[#15294d]">{engineer.name}</strong>
+                      <span className="block truncate text-sm text-[#5b6b85]">
                         {getSpecialtyLabel(engineer.specialty, language)}
                       </span>
                     </div>
                   </div>
                   <div
-                    className={`mt-3 flex items-center gap-2 text-sm font-bold text-[#0d827a] ${isRtl ? "justify-end" : "justify-start"}`}
+                    className={`mt-3 flex items-center gap-2 text-sm font-bold text-[#1567c6] ${isRtl ? "justify-end" : "justify-start"}`}
                   >
                     <Phone className="h-4 w-4" aria-hidden="true" />
                     <span dir="ltr">{engineer.phone}</span>
@@ -357,35 +380,35 @@ export function PublicDashboard() {
           )}
         </section>
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a]">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
                 <Building2 className="h-6 w-6" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#17312d]">{t.registeredCompanies}</h2>
+              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.registeredCompanies}</h2>
             </div>
-            <span className="rounded-full bg-[#e5f7f6] px-3 py-1 text-sm font-extrabold text-[#0d827a]">
+            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
               {numberFormat.format(companies.length)}
             </span>
           </div>
 
           {companies.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-6 text-center text-sm text-[#657872]">
+            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
               {t.noCompanies}
             </p>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {companies.map((company) => (
-                <article key={company.id} className="rounded-3xl bg-[#f6fbfa] p-5">
+                <article key={company.id} className="rounded-3xl bg-[#f4f8fd] p-5">
                   <div className="flex items-start gap-3">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
                       <Building2 className="h-6 w-6" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-lg text-[#17312d]">{company.company_name}</strong>
+                      <strong className="block truncate text-lg text-[#15294d]">{company.company_name}</strong>
                       {company.contact_name && (
-                        <span className="block truncate text-sm text-[#5d716b]">{company.contact_name}</span>
+                        <span className="block truncate text-sm text-[#5b6b85]">{company.contact_name}</span>
                       )}
                     </div>
                   </div>
@@ -409,21 +432,21 @@ export function PublicDashboard() {
           )}
         </section>
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a]">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
                 <ClipboardList className="h-6 w-6" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#17312d]">{t.requestsList}</h2>
+              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.requestsList}</h2>
             </div>
-            <span className="rounded-full bg-[#e5f7f6] px-3 py-1 text-sm font-extrabold text-[#0d827a]">
+            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
               {numberFormat.format(requests.length)}
             </span>
           </div>
 
           {requests.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-6 text-center text-sm text-[#657872]">
+            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
               {t.noRequests}
             </p>
           ) : (
@@ -484,17 +507,17 @@ function AddEngineerCard({
   }
 
   return (
-    <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+    <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
       <div className="mb-5 flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a]">
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
           <UserPlus className="h-6 w-6" aria-hidden="true" />
         </span>
-        <h2 className="m-0 text-xl font-extrabold text-[#17312d]">{t.addEngineerHere}</h2>
+        <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.addEngineerHere}</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-3">
         <label className="grid gap-2 text-sm">
-          <span className="font-extrabold text-[#5f746e]">{t.nameLabel}</span>
+          <span className="font-extrabold text-[#5b6b85]">{t.nameLabel}</span>
           <input
             required
             value={name}
@@ -503,7 +526,7 @@ function AddEngineerCard({
           />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="font-extrabold text-[#5f746e]">{t.phone}</span>
+          <span className="font-extrabold text-[#5b6b85]">{t.phone}</span>
           <input
             required
             type="tel"
@@ -514,7 +537,7 @@ function AddEngineerCard({
           />
         </label>
         <label className="grid gap-2 text-sm">
-          <span className="font-extrabold text-[#5f746e]">{t.specialtyLabel}</span>
+          <span className="font-extrabold text-[#5b6b85]">{t.specialtyLabel}</span>
           <select
             value={specialty}
             onChange={(event) => setSpecialty(event.target.value as MaintenanceSpecialty)}
@@ -533,14 +556,14 @@ function AddEngineerCard({
             <p className="mt-1 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
           )}
           {success && !error && (
-            <p className="mt-1 rounded-2xl bg-[#e5f7f6] px-4 py-3 text-sm font-bold text-[#0d827a]">
+            <p className="mt-1 rounded-2xl bg-[#e3edfb] px-4 py-3 text-sm font-bold text-[#1567c6]">
               {t.addEngineer} ✓
             </p>
           )}
           <button
             type="submit"
             disabled={submitting}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#0f8d86] px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-[#0f8d86]/20 transition-all hover:-translate-y-0.5 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#1f86ec] px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -605,13 +628,13 @@ function RequestCard({
   const isTerminal = isClosed || isRejected || request.status === "COMPLETED";
 
   return (
-    <article className="rounded-3xl bg-[#f6fbfa] p-5">
+    <article className="rounded-3xl bg-[#f4f8fd] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <strong className="block truncate text-base text-[#17312d]">
+          <strong className="block truncate text-base text-[#15294d]">
             #{request.id} — {request.client_company_name}
           </strong>
-          <span className="block truncate text-sm text-[#5d716b]">
+          <span className="block truncate text-sm text-[#5b6b85]">
             {getSpecialtyLabel(request.issue_type, language)} ·{" "}
             {getPriorityLabel(request.priority, language)}
           </span>
@@ -623,10 +646,10 @@ function RequestCard({
 
       {request.assigned_engineer_name && (
         <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm">
-          <UserCheck className="h-4 w-4 text-[#0d827a]" aria-hidden="true" />
-          <span className="font-extrabold text-[#17312d]">{request.assigned_engineer_name}</span>
+          <UserCheck className="h-4 w-4 text-[#1567c6]" aria-hidden="true" />
+          <span className="font-extrabold text-[#15294d]">{request.assigned_engineer_name}</span>
           {request.assigned_engineer_phone && (
-            <span dir="ltr" className="text-[#0d827a]">
+            <span dir="ltr" className="text-[#1567c6]">
               · {request.assigned_engineer_phone}
             </span>
           )}
@@ -634,8 +657,8 @@ function RequestCard({
       )}
 
       {!isTerminal && (
-        <div className="mt-4 grid gap-3 rounded-2xl border border-dashed border-[#cfe6e3] bg-white p-4">
-          <p className="m-0 text-xs font-extrabold uppercase tracking-wider text-[#0d827a]">
+        <div className="mt-4 grid gap-3 rounded-2xl border border-dashed border-[#bfd2ee] bg-white p-4">
+          <p className="m-0 text-xs font-extrabold uppercase tracking-wider text-[#1567c6]">
             {t.actions}
           </p>
 
@@ -757,7 +780,7 @@ function RequestCard({
         </div>
       )}
 
-      <p className="m-0 mt-4 text-xs text-[#7d8d88]">
+      <p className="m-0 mt-4 text-xs text-[#7088a0]">
         {new Date(request.created_at).toLocaleDateString(language === "ar" ? "ar-LY" : "en-GB", {
           year: "numeric",
           month: "short",
@@ -796,7 +819,7 @@ function Stepper({
   };
   return (
     <div className="mt-5">
-      <p className="m-0 mb-3 text-xs font-extrabold uppercase tracking-wider text-[#0d827a]">
+      <p className="m-0 mb-3 text-xs font-extrabold uppercase tracking-wider text-[#1567c6]">
         {t.workflow}
       </p>
       <ol className="grid grid-cols-5 gap-1">
@@ -810,8 +833,8 @@ function Stepper({
                 className={`grid h-8 w-8 place-items-center rounded-full text-xs font-extrabold transition-colors ${
                   reached
                     ? isCurrent
-                      ? "bg-[#0f8d86] text-white shadow-md shadow-[#0f8d86]/30"
-                      : "bg-[#cfe6e3] text-[#0d827a]"
+                      ? "bg-[#1f86ec] text-white shadow-md shadow-[#1f86ec]/30"
+                      : "bg-[#bfd2ee] text-[#1567c6]"
                     : "bg-[#eef3f1] text-[#a3b1ad]"
                 }`}
               >
@@ -819,13 +842,13 @@ function Stepper({
               </span>
               <span
                 className={`text-[10px] font-bold leading-tight ${
-                  reached ? "text-[#17312d]" : "text-[#a3b1ad]"
+                  reached ? "text-[#15294d]" : "text-[#a3b1ad]"
                 }`}
               >
                 {stageLabels[stage]}
               </span>
               {ts && reached && (
-                <span className="text-[9px] text-[#8da09a]">
+                <span className="text-[9px] text-[#7088a0]">
                   {new Date(ts).toLocaleDateString(language === "ar" ? "ar-LY" : "en-GB", {
                     month: "short",
                     day: "numeric"
@@ -842,14 +865,14 @@ function Stepper({
 
 function StatusPill({ status, t }: { status: MaintenanceStatus; t: (typeof copy)[Language] }) {
   const styles: Record<MaintenanceStatus, string> = {
-    NEW: "bg-[#e5f7f6] text-[#0d827a]",
+    NEW: "bg-[#e3edfb] text-[#1567c6]",
     UNDER_REVIEW: "bg-[#f7ecd6] text-[#b87512]",
     ASSIGNED: "bg-[#dfeefd] text-[#1f86ec]",
     IN_PROGRESS: "bg-[#dfeefd] text-[#1f86ec]",
     WAITING_SPARE_PARTS: "bg-[#f7ecd6] text-[#b87512]",
     COMPLETED: "bg-[#e3f3e7] text-[#2c8b4b]",
     REJECTED: "bg-[#fbe5e0] text-[#c84d3a]",
-    CLOSED: "bg-[#eef3f1] text-[#5d716b]"
+    CLOSED: "bg-[#eef3f1] text-[#5b6b85]"
   };
   const labels: Record<MaintenanceStatus, string> = {
     NEW: t.stageNew,
@@ -884,10 +907,10 @@ function ActionButton({
   tone: "primary" | "danger" | "success" | "neutral";
 }) {
   const tones = {
-    primary: "bg-[#0f8d86] hover:bg-[#0d7b75]",
+    primary: "bg-[#1f86ec] hover:bg-[#1567c6]",
     danger: "bg-[#c84d3a] hover:bg-[#a93f2f]",
     success: "bg-[#2c8b4b] hover:bg-[#236e3c]",
-    neutral: "bg-[#5d716b] hover:bg-[#4a5b56]"
+    neutral: "bg-[#5b6b85] hover:bg-[#4a5b56]"
   } as const;
   return (
     <button
@@ -914,16 +937,16 @@ function MetricCard({
   tint: "teal" | "green" | "amber" | "coral";
 }) {
   const tints: Record<typeof tint, { bg: string; text: string }> = {
-    teal: { bg: "bg-[#e1f4f3]", text: "text-[#0d827a]" },
+    teal: { bg: "bg-[#dde9f9]", text: "text-[#1567c6]" },
     green: { bg: "bg-[#e3f3e7]", text: "text-[#2c8b4b]" },
     amber: { bg: "bg-[#f7ecd6]", text: "text-[#b87512]" },
     coral: { bg: "bg-[#fbe5e0]", text: "text-[#c84d3a]" }
   };
   const t = tints[tint];
   return (
-    <div className="rounded-[2rem] bg-white/80 p-5 shadow-xl shadow-[#a5ccd0]/15 backdrop-blur-xl">
+    <div className="rounded-[2rem] bg-white/80 p-5 shadow-xl shadow-[#a8c2e6]/15 backdrop-blur-xl">
       <div className="flex items-center justify-between">
-        <p className="m-0 truncate text-xs font-extrabold uppercase tracking-wider text-[#73847f]">{label}</p>
+        <p className="m-0 truncate text-xs font-extrabold uppercase tracking-wider text-[#7088a0]">{label}</p>
         <span className={`grid h-10 w-10 place-items-center rounded-2xl ${t.bg} ${t.text}`}>{icon}</span>
       </div>
       <strong className={`mt-4 block text-4xl font-extrabold ${t.text}`}>{value}</strong>
@@ -944,13 +967,13 @@ function Row({
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#7d8d88]">
+      <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#7088a0]">
         {icon}
         {label}
       </dt>
       <dd
         dir={ltr ? "ltr" : undefined}
-        className="m-0 min-w-0 max-w-[60%] truncate text-end text-sm font-bold text-[#17312d]"
+        className="m-0 min-w-0 max-w-[60%] truncate text-end text-sm font-bold text-[#15294d]"
       >
         {children}
       </dd>

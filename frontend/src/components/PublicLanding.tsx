@@ -590,17 +590,17 @@ export function PublicLanding() {
   return (
     <div
       dir={t.dir}
-      className="min-h-screen overflow-x-hidden bg-[#f7fbf8] text-[#1b2b27] selection:bg-[#c7eef0] selection:text-[#123532]"
+      className="min-h-screen overflow-x-hidden bg-[#f7fbf8] text-[#15294d] selection:bg-[#bfd2ee] selection:text-[#15294d]"
     >
-      <nav className="sticky top-0 z-50 border-b border-white/70 bg-[#fbfdf9]/80 backdrop-blur-2xl">
+      <nav className="sticky top-0 z-50 border-b border-white/70 bg-[#fbfdff]/80 backdrop-blur-2xl">
         <div dir="ltr" className="container mx-auto flex min-h-[72px] items-center justify-between gap-4 px-4 sm:px-6">
           <a href="/" className="flex min-w-0 items-center no-underline">
             <BrandWordmark />
           </a>
 
-          <div className="hidden items-center gap-8 text-sm font-bold text-[#61736e] md:flex">
+          <div className="hidden items-center gap-8 text-sm font-bold text-[#5b6b85] md:flex">
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} className="no-underline transition-colors hover:text-[#0d827a]">
+              <a key={link.href} href={link.href} className="no-underline transition-colors hover:text-[#1567c6]">
                 {link.label}
               </a>
             ))}
@@ -610,21 +610,21 @@ export function PublicLanding() {
             <button
               type="button"
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/80 px-4 text-sm font-bold text-[#46635d] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#edf8f7]"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/80 px-4 text-sm font-bold text-[#5b6b85] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#e3edfb]"
             >
               <Globe2 className="h-4 w-4" aria-hidden="true" />
               {t.nav.language}
             </button>
             <a
               href="#request"
-              className="hidden h-11 items-center gap-2 rounded-full bg-[#0f8d86] px-5 text-sm font-extrabold text-white no-underline shadow-lg shadow-[#0f8d86]/20 transition-all hover:-translate-y-0.5 hover:bg-[#0d7b75] sm:inline-flex"
+              className="hidden h-11 items-center gap-2 rounded-full bg-[#1f86ec] px-5 text-sm font-extrabold text-white no-underline shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] sm:inline-flex"
             >
               {t.hero.primary}
             </a>
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#24433d] shadow-sm md:hidden"
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#1c3263] shadow-sm md:hidden"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
@@ -635,20 +635,20 @@ export function PublicLanding() {
 
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div className="fixed inset-0 z-[70] bg-[#17312d]/35 backdrop-blur-sm md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="fixed inset-0 z-[70] bg-[#15294d]/35 backdrop-blur-sm md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.aside
               initial={{ x: isRtl ? 320 : -320 }}
               animate={{ x: 0 }}
               exit={{ x: isRtl ? 320 : -320 }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className={`absolute top-0 h-full w-[min(86vw,320px)] bg-[#fbfdf9] p-5 shadow-2xl ${isRtl ? "right-0" : "left-0"}`}
+              className={`absolute top-0 h-full w-[min(86vw,320px)] bg-[#fbfdff] p-5 shadow-2xl ${isRtl ? "right-0" : "left-0"}`}
             >
               <div className="mb-8 flex items-center justify-between">
                 <BrandWordmark />
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="grid h-10 w-10 place-items-center rounded-full bg-[#edf8f7] text-[#24433d]"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-[#e3edfb] text-[#1c3263]"
                   aria-label="Close menu"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
@@ -660,7 +660,7 @@ export function PublicLanding() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-2xl bg-[#eef8f6] px-4 py-4 text-base font-extrabold text-[#24433d] no-underline"
+                    className="rounded-2xl bg-[#eef8f6] px-4 py-4 text-base font-extrabold text-[#1c3263] no-underline"
                   >
                     {link.label}
                   </a>
@@ -668,7 +668,7 @@ export function PublicLanding() {
                 <a
                   href="#request"
                   onClick={() => setMobileOpen(false)}
-                  className="mt-2 rounded-2xl bg-[#0f8d86] px-4 py-4 text-center font-extrabold text-white no-underline"
+                  className="mt-2 rounded-2xl bg-[#1f86ec] px-4 py-4 text-center font-extrabold text-white no-underline"
                 >
                   {t.hero.primary}
                 </a>
@@ -680,29 +680,29 @@ export function PublicLanding() {
 
       <main>
         <section className="relative overflow-hidden bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] py-20 sm:py-24">
-          <div className="absolute right-[-8rem] top-[-10rem] h-80 w-80 rounded-full bg-[#bfecef]/45 blur-3xl" />
+          <div className="absolute right-[-8rem] top-[-10rem] h-80 w-80 rounded-full bg-[#a5c2e8]/45 blur-3xl" />
           <div className="absolute bottom-[-12rem] left-[-10rem] h-96 w-96 rounded-full bg-[#f5ead6]/70 blur-3xl" />
           <div className="container relative mx-auto grid items-center gap-14 px-4 sm:px-6 md:grid-cols-2">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className={isRtl ? "text-right" : "text-left"}>
-              <span className="mb-5 inline-flex rounded-full bg-white/75 px-4 py-2 text-sm font-extrabold text-[#0d827a] shadow-sm">
+              <span className="mb-5 inline-flex rounded-full bg-white/75 px-4 py-2 text-sm font-extrabold text-[#1567c6] shadow-sm">
                 {t.hero.eyebrow}
               </span>
-              <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-normal text-[#17312d] md:text-5xl">
+              <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-normal text-[#15294d] md:text-5xl">
                 {t.hero.titleA}{" "}
                 {t.hero.titleAccent && (
                   <>
-                    <span className="bg-gradient-to-r from-[#0f8d86] to-[#4aa9c1] bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-[#1f86ec] to-[#4aa9c1] bg-clip-text text-transparent">
                       {t.hero.titleAccent}
                     </span>{" "}
                   </>
                 )}
                 {t.hero.titleB}
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-8 text-[#5d716b] md:text-lg">{t.hero.description}</p>
+              <p className="mt-6 max-w-xl text-base leading-8 text-[#5b6b85] md:text-lg">{t.hero.description}</p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#request"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 text-sm font-extrabold text-white no-underline shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 text-sm font-extrabold text-white no-underline shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6]"
                 >
                   {t.hero.primary}
                   <DirectionArrow className="h-4 w-4" aria-hidden="true" />
@@ -710,7 +710,7 @@ export function PublicLanding() {
                 <button
                   type="button"
                   onClick={() => setTrackOpen(true)}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/80 px-6 text-sm font-extrabold text-[#24433d] shadow-sm transition-all hover:-translate-y-1 hover:bg-[#edf8f7]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/80 px-6 text-sm font-extrabold text-[#1c3263] shadow-sm transition-all hover:-translate-y-1 hover:bg-[#e3edfb]"
                 >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   {t.hero.secondary}
@@ -724,15 +724,15 @@ export function PublicLanding() {
               transition={{ duration: 0.65, delay: 0.08 }}
               className="relative"
             >
-              <div className="absolute inset-6 rounded-[3rem] bg-[#bde9ec]/45 blur-3xl" />
-              <div className="relative rounded-[2.25rem] bg-white/72 p-5 shadow-2xl shadow-[#7ebcc1]/20 backdrop-blur-xl">
+              <div className="absolute inset-6 rounded-[3rem] bg-[#bfd2ee]/45 blur-3xl" />
+              <div className="relative rounded-[2.25rem] bg-white/72 p-5 shadow-2xl shadow-[#5a8ecc]/20 backdrop-blur-xl">
                 <div className="mb-6 flex items-center justify-between gap-4">
                   <div>
-                    <p className="m-0 text-sm font-extrabold text-[#70827d]">{t.hero.dashboardTitle}</p>
-                    <h2 className="m-0 mt-1 text-2xl font-extrabold text-[#17312d]">Ops Console</h2>
+                    <p className="m-0 text-sm font-extrabold text-[#5b6b85]">{t.hero.dashboardTitle}</p>
+                    <h2 className="m-0 mt-1 text-2xl font-extrabold text-[#15294d]">Ops Console</h2>
                   </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-[#e5f7f6] px-3 py-2 text-xs font-extrabold text-[#0d827a]">
-                    <span className="h-2 w-2 rounded-full bg-[#0f8d86]" />
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#e3edfb] px-3 py-2 text-xs font-extrabold text-[#1567c6]">
+                    <span className="h-2 w-2 rounded-full bg-[#1f86ec]" />
                     {t.hero.live}
                   </span>
                 </div>
@@ -743,9 +743,9 @@ export function PublicLanding() {
                     { label: t.stats.open, value: impactStats ? numberFormat.format(impactStats.total_open_requests) : "—" },
                     { label: t.stats.rate, value: impactStats ? `${numberFormat.format(impactStats.completion_rate)}%` : "—" }
                   ].map((item) => (
-                    <div key={item.label} className="rounded-3xl bg-[#f6fbfa] px-4 py-5">
-                      <p className="m-0 truncate text-xs font-bold text-[#73847f]">{item.label}</p>
-                      <strong className="mt-3 block text-3xl font-extrabold text-[#0d827a]">{item.value}</strong>
+                    <div key={item.label} className="rounded-3xl bg-[#f4f8fd] px-4 py-5">
+                      <p className="m-0 truncate text-xs font-bold text-[#7088a0]">{item.label}</p>
+                      <strong className="mt-3 block text-3xl font-extrabold text-[#1567c6]">{item.value}</strong>
                     </div>
                   ))}
                 </div>
@@ -755,21 +755,21 @@ export function PublicLanding() {
                     const issues = impactStats?.top_recurring_maintenance_issues ?? [];
                     if (issues.length === 0) {
                       return (
-                        <p className="m-0 rounded-3xl bg-[#fbfdf9] p-6 text-center text-sm font-bold text-[#8da09a]">
+                        <p className="m-0 rounded-3xl bg-[#fbfdff] p-6 text-center text-sm font-bold text-[#7088a0]">
                           {t.hero.noActivity}
                         </p>
                       );
                     }
                     const maxTotal = Math.max(...issues.map((issue) => issue.total), 1);
                     return issues.slice(0, 3).map((issue) => (
-                      <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdf9] p-4">
-                        <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#24433d]">
+                      <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdff] p-4">
+                        <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#1c3263]">
                           <span>{getSpecialtyName(issue.issue_type, language)}</span>
-                          <span className="text-[#8da09a]">{numberFormat.format(issue.total)}</span>
+                          <span className="text-[#7088a0]">{numberFormat.format(issue.total)}</span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-[#e3eeee]">
                           <span
-                            className="block h-full rounded-full bg-[#0f8d86]"
+                            className="block h-full rounded-full bg-[#1f86ec]"
                             style={{ width: `${Math.round((issue.total / maxTotal) * 100)}%` }}
                           />
                         </div>
@@ -782,12 +782,12 @@ export function PublicLanding() {
           </div>
         </section>
 
-        <section id="services" className="bg-[#fbfdf9] py-20 sm:py-24">
+        <section id="services" className="bg-[#fbfdff] py-20 sm:py-24">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mx-auto mb-14 max-w-3xl text-center">
-              <span className="text-sm font-extrabold text-[#0d827a]">{t.services.eyebrow}</span>
-              <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.services.title}</h2>
-              <p className="mt-4 text-base leading-8 text-[#657872]">{t.services.description}</p>
+              <span className="text-sm font-extrabold text-[#1567c6]">{t.services.eyebrow}</span>
+              <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#15294d] md:text-4xl">{t.services.title}</h2>
+              <p className="mt-4 text-base leading-8 text-[#5b6b85]">{t.services.description}</p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -797,13 +797,13 @@ export function PublicLanding() {
                   <motion.article
                     key={service.specialty}
                     whileHover={{ y: -6 }}
-                    className="rounded-[2rem] bg-[#f4faf8] p-6 transition-colors hover:bg-[#eef8f7]"
+                    className="rounded-[2rem] bg-[#f0f5fc] p-6 transition-colors hover:bg-[#e3edfb]"
                   >
-                    <span className="mb-6 grid h-14 w-14 place-items-center rounded-full bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                    <span className="mb-6 grid h-14 w-14 place-items-center rounded-full bg-[#dde9f9] text-[#1567c6] shadow-sm">
                       <Icon className="h-7 w-7" aria-hidden="true" />
                     </span>
-                    <h3 className="text-xl font-extrabold text-[#17312d]">{getServiceTitle(service, language)}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[#657872]">{getServiceDescription(service, language)}</p>
+                    <h3 className="text-xl font-extrabold text-[#15294d]">{getServiceTitle(service, language)}</h3>
+                    <p className="mt-3 text-sm leading-7 text-[#5b6b85]">{getServiceDescription(service, language)}</p>
                   </motion.article>
                 );
               })}
@@ -815,10 +815,10 @@ export function PublicLanding() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mb-16 grid gap-6 md:grid-cols-[0.8fr_1.2fr] md:items-end">
               <div className={isRtl ? "text-right" : "text-left"}>
-                <span className="text-sm font-extrabold text-[#0d827a]">{t.workflow.eyebrow}</span>
-                <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.workflow.title}</h2>
+                <span className="text-sm font-extrabold text-[#1567c6]">{t.workflow.eyebrow}</span>
+                <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#15294d] md:text-4xl">{t.workflow.title}</h2>
               </div>
-              <p className="text-base leading-8 text-[#657872]">{t.workflow.description}</p>
+              <p className="text-base leading-8 text-[#5b6b85]">{t.workflow.description}</p>
             </div>
 
             <div className="grid gap-8 md:grid-cols-4">
@@ -833,12 +833,12 @@ export function PublicLanding() {
                     transition={{ delay: index * 0.06 }}
                     className="relative"
                   >
-                    <span className="mb-6 grid h-14 w-14 place-items-center rounded-full bg-[#e5f7f6] text-[#0d827a] shadow-sm">
+                    <span className="mb-6 grid h-14 w-14 place-items-center rounded-full bg-[#e3edfb] text-[#1567c6] shadow-sm">
                       <Icon className="h-7 w-7" aria-hidden="true" />
                     </span>
-                    <span className="text-sm font-extrabold text-[#9aaba5]">{String(index + 1).padStart(2, "0")}</span>
-                    <h3 className="mt-3 text-xl font-extrabold text-[#17312d]">{getWorkflowTitle(item, language)}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[#657872]">{getWorkflowDescription(item, language)}</p>
+                    <span className="text-sm font-extrabold text-[#7088a0]">{String(index + 1).padStart(2, "0")}</span>
+                    <h3 className="mt-3 text-xl font-extrabold text-[#15294d]">{getWorkflowTitle(item, language)}</h3>
+                    <p className="mt-3 text-sm leading-7 text-[#5b6b85]">{getWorkflowDescription(item, language)}</p>
                   </motion.div>
                 );
               })}
@@ -851,30 +851,30 @@ export function PublicLanding() {
         <section id="stats" className="bg-[#eef7f6] py-20">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mb-12 max-w-2xl">
-              <span className="text-sm font-extrabold text-[#0d827a]">{t.stats.eyebrow}</span>
-              <h2 className="mt-4 text-3xl font-extrabold text-[#17312d] md:text-4xl">{t.stats.title}</h2>
+              <span className="text-sm font-extrabold text-[#1567c6]">{t.stats.eyebrow}</span>
+              <h2 className="mt-4 text-3xl font-extrabold text-[#15294d] md:text-4xl">{t.stats.title}</h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {statItems.map((item) => (
                 <div key={item.label} className="rounded-[2rem] bg-white/70 p-6">
-                  <p className="m-0 text-sm font-bold text-[#657872]">{item.label}</p>
-                  <strong className="mt-4 block text-3xl font-extrabold text-[#0d827a]">{item.value}</strong>
+                  <p className="m-0 text-sm font-bold text-[#5b6b85]">{item.label}</p>
+                  <strong className="mt-4 block text-3xl font-extrabold text-[#1567c6]">{item.value}</strong>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="request" className="bg-[linear-gradient(135deg,#fffdf7_0%,#f2fbfa_100%)] py-20 sm:py-24">
+        <section id="request" className="bg-[linear-gradient(135deg,#fffdf7_0%,#eef4fc_100%)] py-20 sm:py-24">
           <div className="container mx-auto grid gap-12 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <div className={isRtl ? "text-right" : "text-left"}>
-              <span className="text-sm font-extrabold text-[#0d827a]">{t.request.eyebrow}</span>
-              <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.request.title}</h2>
-              <p className="mt-5 text-base leading-8 text-[#657872]">{t.request.description}</p>
+              <span className="text-sm font-extrabold text-[#1567c6]">{t.request.eyebrow}</span>
+              <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#15294d] md:text-4xl">{t.request.title}</h2>
+              <p className="mt-5 text-base leading-8 text-[#5b6b85]">{t.request.description}</p>
 
               {createdTicket && (
-                <div className="mt-8 rounded-[2rem] bg-[#e5f7f6] p-5 text-[#17312d]">
-                  <p className="m-0 text-sm font-bold text-[#0d827a]">{t.request.success}</p>
+                <div className="mt-8 rounded-[2rem] bg-[#e3edfb] p-5 text-[#15294d]">
+                  <p className="m-0 text-sm font-bold text-[#1567c6]">{t.request.success}</p>
                   <strong className="mt-3 block text-3xl font-extrabold">
                     {t.request.ticket}: #{createdTicket.id}
                   </strong>
@@ -882,7 +882,7 @@ export function PublicLanding() {
               )}
             </div>
 
-            <form onSubmit={handleRequestSubmit} className="rounded-[2rem] bg-white/76 p-5 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7">
+            <form onSubmit={handleRequestSubmit} className="rounded-[2rem] bg-white/76 p-5 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label={t.request.companyName}>
                   <input
@@ -978,7 +978,7 @@ export function PublicLanding() {
                   />
                 </Field>
                 <label className="md:col-span-2">
-                  <span className="mb-2 block text-sm font-extrabold text-[#5f746e]">{t.request.details}</span>
+                  <span className="mb-2 block text-sm font-extrabold text-[#5b6b85]">{t.request.details}</span>
                   <textarea
                     required
                     rows={5}
@@ -987,12 +987,12 @@ export function PublicLanding() {
                     className="public-input min-h-[130px] resize-y"
                   />
                 </label>
-                <label className="flex items-center gap-3 text-sm font-extrabold text-[#5f746e] md:col-span-2">
+                <label className="flex items-center gap-3 text-sm font-extrabold text-[#5b6b85] md:col-span-2">
                   <input
                     type="checkbox"
                     checked={requestForm.is_hazardous}
                     onChange={(event) => setRequestForm({ ...requestForm, is_hazardous: event.target.checked })}
-                    className="h-5 w-5 accent-[#0f8d86]"
+                    className="h-5 w-5 accent-[#1f86ec]"
                   />
                   {t.request.hazardous}
                 </label>
@@ -1003,7 +1003,7 @@ export function PublicLanding() {
               <button
                 type="submit"
                 disabled={requestState === "submitting"}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {requestState === "submitting" && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
                 {requestState === "submitting" ? t.request.submitting : t.request.submit}
@@ -1013,9 +1013,9 @@ export function PublicLanding() {
         </section>
       </main>
 
-      <footer className="bg-[#fbfdf9] py-8">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-center text-sm text-[#657872] sm:px-6 md:flex-row md:text-start">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9aaba5]">{t.tagline}</span>
+      <footer className="bg-[#fbfdff] py-8">
+        <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-center text-sm text-[#5b6b85] sm:px-6 md:flex-row md:text-start">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#7088a0]">{t.tagline}</span>
           <p className="m-0 max-w-md">{t.footer}</p>
         </div>
       </footer>
@@ -1023,7 +1023,7 @@ export function PublicLanding() {
       <AnimatePresence>
         {trackOpen && (
           <motion.div
-            className="fixed inset-0 z-[80] grid place-items-center bg-[#17312d]/40 px-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] grid place-items-center bg-[#15294d]/40 px-4 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1032,12 +1032,12 @@ export function PublicLanding() {
               initial={{ opacity: 0, y: 18, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 18, scale: 0.98 }}
-              className="w-full max-w-md rounded-[2rem] bg-[#fbfdf9] p-6 text-[#17312d] shadow-2xl"
+              className="w-full max-w-md rounded-[2rem] bg-[#fbfdff] p-6 text-[#15294d] shadow-2xl"
             >
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="m-0 text-2xl font-extrabold">{t.track.title}</h2>
-                  <p className="m-0 mt-2 text-sm leading-6 text-[#657872]">{t.track.description}</p>
+                  <p className="m-0 mt-2 text-sm leading-6 text-[#5b6b85]">{t.track.description}</p>
                 </div>
                 <button
                   type="button"
@@ -1046,7 +1046,7 @@ export function PublicLanding() {
                     setTrackedRequest(null);
                     setTrackError(null);
                   }}
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#eef8f6] text-[#24433d]"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#eef8f6] text-[#1c3263]"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
@@ -1065,7 +1065,7 @@ export function PublicLanding() {
                 <button
                   type="submit"
                   disabled={trackLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {trackLoading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
                   {trackLoading ? t.track.loading : t.track.submit}
@@ -1074,11 +1074,11 @@ export function PublicLanding() {
 
               {trackError && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{trackError}</p>}
               {trackedRequest && (
-                <div className="mt-5 rounded-[1.5rem] bg-[#eef8f6] p-4 text-sm text-[#50635e]">
-                  <strong className="block text-2xl text-[#17312d]">#{trackedRequest.id}</strong>
+                <div className="mt-5 rounded-[1.5rem] bg-[#eef8f6] p-4 text-sm text-[#5b6b85]">
+                  <strong className="block text-2xl text-[#15294d]">#{trackedRequest.id}</strong>
                   <p className="m-0 mt-2">{trackedRequest.client_company_name}</p>
                   <p className="m-0 mt-1">{getSpecialtyName(trackedRequest.issue_type, language)}</p>
-                  <p className="m-0 mt-3 font-extrabold text-[#0d827a]">
+                  <p className="m-0 mt-3 font-extrabold text-[#1567c6]">
                     {t.track.status}: {statusLabels[trackedRequest.status][language]}
                   </p>
                 </div>
@@ -1161,18 +1161,18 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
   }
 
   return (
-    <section id="engineers" className="bg-[#fbfdf9] py-20 sm:py-24">
+    <section id="engineers" className="bg-[#fbfdff] py-20 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6">
         <div className="mx-auto mb-12 max-w-3xl text-center">
-          <span className="text-sm font-extrabold text-[#0d827a]">{t.engineers.eyebrow}</span>
-          <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.engineers.title}</h2>
-          <p className="mt-4 text-base leading-8 text-[#657872]">{t.engineers.description}</p>
+          <span className="text-sm font-extrabold text-[#1567c6]">{t.engineers.eyebrow}</span>
+          <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#15294d] md:text-4xl">{t.engineers.title}</h2>
+          <p className="mt-4 text-base leading-8 text-[#5b6b85]">{t.engineers.description}</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <form
             onSubmit={handleAdd}
-            className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-7"
+            className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7"
           >
             <div className="grid gap-5">
               <Field label={t.engineers.name} icon={HardHat}>
@@ -1215,7 +1215,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -1227,31 +1227,31 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
           </form>
 
           <div className="grid gap-5">
-            <div className="rounded-[2rem] bg-white/72 p-8 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-10">
+            <div className="rounded-[2rem] bg-white/72 p-8 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-10">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-extrabold uppercase tracking-wider text-[#0d827a]">
+                <span className="text-sm font-extrabold uppercase tracking-wider text-[#1567c6]">
                   {t.engineers.listTitle}
                 </span>
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
                   <Users className="h-6 w-6" aria-hidden="true" />
                 </span>
               </div>
               <div className="mt-6 flex items-baseline gap-3">
-                <strong className="text-6xl font-extrabold text-[#0d827a] md:text-7xl">
+                <strong className="text-6xl font-extrabold text-[#1567c6] md:text-7xl">
                   {count === null ? "—" : numberFormat.format(count)}
                 </strong>
-                <span className="text-base font-bold text-[#5d716b] md:text-lg">{t.engineers.countHeadline}</span>
+                <span className="text-base font-bold text-[#5b6b85] md:text-lg">{t.engineers.countHeadline}</span>
               </div>
-              <p className="mt-4 text-sm leading-7 text-[#657872]">{t.engineers.countCaption}</p>
+              <p className="mt-4 text-sm leading-7 text-[#5b6b85]">{t.engineers.countCaption}</p>
               {justAdded && (
-                <p className="mt-4 rounded-2xl bg-[#e5f7f6] px-4 py-3 text-sm font-bold text-[#0d827a]">
+                <p className="mt-4 rounded-2xl bg-[#e3edfb] px-4 py-3 text-sm font-bold text-[#1567c6]">
                   {t.engineers.submit} ✓
                 </p>
               )}
             </div>
 
-            <div className="flex items-start gap-3 rounded-3xl border border-dashed border-[#cfe6e3] bg-[#f6fbfa] p-5 text-sm leading-7 text-[#5d716b]">
-              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e5f7f6] text-[#0d827a]">
+            <div className="flex items-start gap-3 rounded-3xl border border-dashed border-[#bfd2ee] bg-[#f4f8fd] p-5 text-sm leading-7 text-[#5b6b85]">
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e3edfb] text-[#1567c6]">
                 <ShieldAlert className="h-5 w-5" aria-hidden="true" />
               </span>
               <p className="m-0">{t.engineers.privacyNote}</p>
@@ -1275,8 +1275,8 @@ function Field({
 }) {
   return (
     <label>
-      <span className="mb-2 flex items-center gap-2 text-sm font-extrabold text-[#5f746e]">
-        {Icon && <Icon className="h-4 w-4 text-[#0d827a]" aria-hidden="true" />}
+      <span className="mb-2 flex items-center gap-2 text-sm font-extrabold text-[#5b6b85]">
+        {Icon && <Icon className="h-4 w-4 text-[#1567c6]" aria-hidden="true" />}
         {label}
       </span>
       {children}

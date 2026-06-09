@@ -141,7 +141,12 @@ class PublicImpactStatisticsAPIView(APIView):
         payload.update(
             {
                 "total_requests": queryset.count(),
-                "completed_tickets": queryset.filter(status=MaintenanceRequest.Status.COMPLETED).count(),
+                "completed_tickets": queryset.filter(
+                    status__in=[
+                        MaintenanceRequest.Status.COMPLETED,
+                        MaintenanceRequest.Status.CLOSED,
+                    ]
+                ).count(),
             }
         )
         return Response(payload)

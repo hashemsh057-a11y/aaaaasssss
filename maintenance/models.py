@@ -131,7 +131,12 @@ class MaintenanceRequestQuerySet(models.QuerySet):
         total = self.count()
         if total == 0:
             return 0.0
-        completed = self.filter(status=MaintenanceRequest.Status.COMPLETED).count()
+        completed = self.filter(
+            status__in=[
+                MaintenanceRequest.Status.COMPLETED,
+                MaintenanceRequest.Status.CLOSED,
+            ]
+        ).count()
         return round((completed / total) * 100, 2)
 
     def top_recurring_issues(self, limit=5):
