@@ -1,5 +1,8 @@
 from django.contrib.auth import get_user_model
-from rest_framework import generics, status, viewsets
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import generics, serializers as drf_serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -20,7 +23,6 @@ from .serializers import (
     EngineerProfileSerializer,
     MaintenanceRequestSerializer,
     PublicCompanyListSerializer,
-    PublicCompanyRegistrationSerializer,
     PublicContactInquirySerializer,
     PublicEngineerSerializer,
     PublicMaintenanceRequestCreateSerializer,
@@ -191,18 +193,6 @@ class PublicCompanyListAPIView(generics.ListAPIView):
     pagination_class = None
 
 
-class PublicCompanyRegistrationAPIView(APIView):
-    """Open POST endpoint to let a company self-register without a request."""
-
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = PublicCompanyRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        return Response(result, status=status.HTTP_201_CREATED)
-
-
 class PublicEngineerListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicEngineerSerializer
@@ -214,6 +204,94 @@ class PublicEngineerDeleteAPIView(generics.DestroyAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicEngineerSerializer
     queryset = PublicEngineer.objects.all()
+
+
+class PublicAdminRequestTransitionAPIView(APIView):
+    """Open admin endpoint to transition a maintenance request's status.
+
+    The dashboard is intentionally login-less per the platform's design, so
+    this endpoint mirrors that — it accepts a transition without auth and
+    enforces only the workflow rules (legal status transitions, specialty
+    match for assigned engineers).
+    """
+
+    permission_classes = [AllowAny]
+
+    TIMESTAMP_FIELD_BY_STATUS = {
+        MaintenanceRequest.Status.UNDER_REVIEW: None,
+        MaintenanceRequest.Status.ASSIGNED: "assigned_at",
+        MaintenanceRequest.Status.IN_PROGRESS: "in_progress_at",
+        MaintenanceRequest.Status.WAITING_SPARE_PARTS: "waiting_spare_parts_at",
+        MaintenanceRequest.Status.COMPLETED: "completed_at",
+        MaintenanceRequest.Status.CLOSED: "closed_at",
+        MaintenanceRequest.Status.REJECTED: "rejected_at",
+    }
+
+    def post(self, request, request_id):
+        maintenance_request = get_object_or_404(MaintenanceRequest, pk=request_id)
+        target_status = request.data.get("status")
+        if not target_status:
+            raise drf_serializers.ValidationError({"status": "Required."})
+        if target_status not in dict(MaintenanceRequest.Status.choices):
+            raise drf_serializers.ValidationError({"status": "Unknown status."})
+
+        # Validate the transition against the workflow map (skip the actor
+        # role check that the model-level validate_transition enforces).
+        if target_status != maintenance_request.status and not maintenance_request.can_transition_to(
+            target_status
+        ):
+            raise drf_serializers.ValidationError(
+                {
+                    "status": f"Illegal workflow transition from {maintenance_request.status} to {target_status}."
+                }
+            )
+
+        assigned_public_engineer_id = request.data.get("assigned_public_engineer_id")
+        if assigned_public_engineer_id:
+            try:
+                public_engineer = PublicEngineer.objects.get(pk=assigned_public_engineer_id)
+            except PublicEngineer.DoesNotExist:
+                raise drf_serializers.ValidationError(
+                    {"assigned_public_engineer_id": "Engineer not found."}
+                )
+            if public_engineer.specialty != maintenance_request.issue_type:
+                raise drf_serializers.ValidationError(
+                    {
+                        "assigned_public_engineer_id": "Engineer specialty must match the request issue type."
+                    }
+                )
+            maintenance_request.assigned_public_engineer = public_engineer
+
+        # Require an assigned engineer (either kind) before moving past UNDER_REVIEW.
+        if target_status in {
+            MaintenanceRequest.Status.ASSIGNED,
+            MaintenanceRequest.Status.IN_PROGRESS,
+            MaintenanceRequest.Status.WAITING_SPARE_PARTS,
+        } and not (
+            maintenance_request.assigned_engineer_id
+            or maintenance_request.assigned_public_engineer_id
+        ):
+            raise drf_serializers.ValidationError(
+                {"assigned_public_engineer_id": "An assigned engineer is required for this status."}
+            )
+
+        now = timezone.now()
+        timestamp_field = self.TIMESTAMP_FIELD_BY_STATUS.get(target_status)
+        if timestamp_field and getattr(maintenance_request, timestamp_field) is None:
+            setattr(maintenance_request, timestamp_field, now)
+
+        maintenance_request.status = target_status
+        try:
+            maintenance_request.full_clean()
+        except DjangoValidationError as exc:
+            raise drf_serializers.ValidationError(
+                exc.message_dict if hasattr(exc, "message_dict") else exc.messages
+            )
+        maintenance_request.save()
+
+        from .serializers import PublicMaintenanceRequestTrackingSerializer
+
+        return Response(PublicMaintenanceRequestTrackingSerializer(maintenance_request).data)
 
 
 class PublicContactInquiryAPIView(APIView):

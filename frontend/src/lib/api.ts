@@ -1,12 +1,11 @@
 import type {
+  AdminTransitionPayload,
   AuthTokens,
   DashboardStatistics,
   EngineerProfile,
   MaintenanceRequest,
   MaintenanceStatus,
   PublicCompany,
-  PublicCompanyPayload,
-  PublicCompanyRegistrationResult,
   PublicContactPayload,
   PublicEngineer,
   PublicEngineerPayload,
@@ -216,13 +215,13 @@ export function deletePublicEngineer(id: number) {
   });
 }
 
-export function getPublicCompanies() {
-  return apiFetch<PublicCompany[]>("/public/companies-list/");
-}
-
-export function createPublicCompany(payload: PublicCompanyPayload) {
-  return apiFetch<PublicCompanyRegistrationResult>("/public/companies/", {
+export function adminTransitionRequest(requestId: number, payload: AdminTransitionPayload) {
+  return apiFetch<PublicTrackedRequest>(`/public/admin/requests/${requestId}/transition/`, {
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export function getPublicCompanies() {
+  return apiFetch<PublicCompany[]>("/public/companies-list/");
 }

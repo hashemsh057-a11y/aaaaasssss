@@ -208,6 +208,16 @@ class MaintenanceRequest(models.Model):
         blank=True,
         related_name="assigned_requests",
     )
+    # Lightweight public engineer assignment used by the open dashboard.
+    # Either assigned_engineer (authenticated) or assigned_public_engineer
+    # (directory entry) can hold the on-site technician.
+    assigned_public_engineer = models.ForeignKey(
+        "PublicEngineer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_requests",
+    )
     assigned_at = models.DateTimeField(null=True, blank=True, editable=False)
     in_progress_at = models.DateTimeField(null=True, blank=True, editable=False)
     waiting_spare_parts_at = models.DateTimeField(null=True, blank=True, editable=False)
@@ -241,10 +251,17 @@ class MaintenanceRequest(models.Model):
             self.Status.COMPLETED,
             self.Status.CLOSED,
         }:
-            if not self.assigned_engineer_id:
+            if not self.assigned_engineer_id and not self.assigned_public_engineer_id:
                 raise ValidationError({"assigned_engineer": "An assigned engineer is required for this status."})
         if self.assigned_engineer and self.assigned_engineer.specialty != self.issue_type:
             raise ValidationError({"assigned_engineer": "Assigned engineer specialty must match the request issue type."})
+        if (
+            self.assigned_public_engineer
+            and self.assigned_public_engineer.specialty != self.issue_type
+        ):
+            raise ValidationError(
+                {"assigned_public_engineer": "Assigned engineer specialty must match the request issue type."}
+            )
 
     def can_transition_to(self, target_status):
         return target_status in self.WORKFLOW_TRANSITIONS[self.status]

@@ -121,8 +121,22 @@ export type PublicTrackedRequest = {
   status: MaintenanceStatus;
   status_display: string;
   preferred_date: string;
+  assigned_engineer_name: string | null;
+  assigned_engineer_phone: string | null;
+  assigned_public_engineer: number | null;
+  assigned_at: string | null;
+  in_progress_at: string | null;
+  waiting_spare_parts_at: string | null;
+  completed_at: string | null;
+  closed_at: string | null;
+  rejected_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AdminTransitionPayload = {
+  status: MaintenanceStatus;
+  assigned_public_engineer_id?: number;
 };
 
 export type PublicContactPayload = {
@@ -158,19 +172,6 @@ export type PublicCompany = {
   email: string;
 };
 
-export type PublicCompanyPayload = {
-  contact_name: string;
-  company_name: string;
-  commercial_register: string;
-  email: string;
-  phone: string;
-  address: string;
-};
-
-export type PublicCompanyRegistrationResult = {
-  id: number;
-  created: boolean;
-};
 
 export type PublicMaintenanceRequestPayload = {
   contact_name: string;

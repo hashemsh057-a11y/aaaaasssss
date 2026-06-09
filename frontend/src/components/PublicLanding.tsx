@@ -30,7 +30,6 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
-  createPublicCompany,
   createPublicEngineer,
   getPublicEngineers,
   getPublicImpactStatistics,
@@ -42,8 +41,6 @@ import type {
   MaintenanceSpecialty,
   MaintenanceStatus,
   Priority,
-  PublicCompanyPayload,
-  PublicEngineer,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest
@@ -63,7 +60,6 @@ type Copy = {
     request: string;
     stats: string;
     engineers: string;
-    companies: string;
     login: string;
     language: string;
   };
@@ -117,22 +113,6 @@ type Copy = {
     countHeadline: string;
     countCaption: string;
     privacyNote: string;
-  };
-  companies: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    companyName: string;
-    contactName: string;
-    commercialRegister: string;
-    email: string;
-    phone: string;
-    address: string;
-    submit: string;
-    submitting: string;
-    success: string;
-    alreadyRegistered: string;
-    error: string;
   };
   request: {
     eyebrow: string;
@@ -196,7 +176,6 @@ const copy: Record<Language, Copy> = {
       request: "تسجيل طلب",
       stats: "المؤشرات",
       engineers: "المهندسون",
-      companies: "تسجيل شركة",
       login: "دخول النظام",
       language: "English"
     },
@@ -252,22 +231,6 @@ const copy: Record<Language, Copy> = {
       countCaption: "مهندسون وفنيون متعدّدو التخصصات جاهزون لاستلام البلاغات.",
       privacyNote: "التفاصيل الكاملة (الأسماء وأرقام الهواتف) لا تُعرض على الصفحة العامة، وتبقى متاحة فقط للمسؤولين عبر لوحة المتابعة."
     },
-    companies: {
-      eyebrow: "للشركات",
-      title: "سجّل شركتك في المنظومة",
-      description: "أنشئ ملف شركتك مرّة واحدة، ليصبح بإمكانك تقديم بلاغات الصيانة ومتابعتها تحت اسم شركتك. التسجيل لا يتطلّب كلمة مرور.",
-      companyName: "اسم الشركة",
-      contactName: "اسم المسؤول",
-      commercialRegister: "السجل التجاري",
-      email: "البريد الإلكتروني",
-      phone: "رقم الهاتف",
-      address: "العنوان",
-      submit: "تسجيل الشركة",
-      submitting: "جارٍ التسجيل...",
-      success: "تم تسجيل شركتك بنجاح في المنظومة.",
-      alreadyRegistered: "هذه الشركة مسجّلة مسبقًا. تم تأكيد بياناتها.",
-      error: "تعذّر إتمام التسجيل. تحقق من البيانات وحاول مرة أخرى."
-    },
     request: {
       eyebrow: "تقديم طلب جديد",
       title: "تقديم طلب صيانة",
@@ -312,7 +275,6 @@ const copy: Record<Language, Copy> = {
       request: "Create Request",
       stats: "Stats",
       engineers: "Engineers",
-      companies: "Register company",
       login: "System Login",
       language: "العربية"
     },
@@ -367,22 +329,6 @@ const copy: Record<Language, Copy> = {
       countHeadline: "members on the maintenance team",
       countCaption: "Multi-disciplinary engineers and technicians ready to take on reports.",
       privacyNote: "Full details (names and phones) are not shown on the public page — only administrators see them in the operations dashboard."
-    },
-    companies: {
-      eyebrow: "For companies",
-      title: "Register your company in the system",
-      description: "Create your company profile once so future maintenance requests are tied to it. No password required.",
-      companyName: "Company name",
-      contactName: "Contact person",
-      commercialRegister: "Commercial register",
-      email: "Email",
-      phone: "Phone",
-      address: "Address",
-      submit: "Register company",
-      submitting: "Registering...",
-      success: "Your company has been registered successfully.",
-      alreadyRegistered: "This company is already registered. Its profile is confirmed.",
-      error: "Registration failed. Check your details and try again."
     },
     request: {
       eyebrow: "New request",
@@ -630,7 +576,6 @@ export function PublicLanding() {
     { href: "#services", label: t.nav.services },
     { href: "#workflow", label: t.nav.workflow },
     { href: "#engineers", label: t.nav.engineers },
-    { href: "#companies", label: t.nav.companies },
     { href: "#stats", label: t.nav.stats },
     { href: "#request", label: t.nav.request }
   ];
@@ -902,8 +847,6 @@ export function PublicLanding() {
         </section>
 
         <EngineersSection copy={t} language={language} />
-
-        <CompanyRegistrationSection copy={t} language={language} />
 
         <section id="stats" className="bg-[#eef7f6] py-20">
           <div className="container mx-auto px-4 sm:px-6">
@@ -1320,144 +1263,6 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
   );
 }
 
-function CompanyRegistrationSection({ copy: t }: { copy: Copy; language: Language }) {
-  const [form, setForm] = useState<PublicCompanyPayload>({
-    contact_name: "",
-    company_name: "",
-    commercial_register: "",
-    email: "",
-    phone: "",
-    address: ""
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ id: number; created: boolean } | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    setResult(null);
-    try {
-      const response = await createPublicCompany({
-        ...form,
-        contact_name: form.contact_name.trim(),
-        company_name: form.company_name.trim(),
-        commercial_register: form.commercial_register.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        address: form.address.trim()
-      });
-      setResult(response);
-      setForm({
-        contact_name: "",
-        company_name: "",
-        commercial_register: "",
-        email: "",
-        phone: "",
-        address: ""
-      });
-    } catch {
-      setError(t.companies.error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <section id="companies" className="bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] py-20 sm:py-24">
-      <div className="container mx-auto px-4 sm:px-6">
-        <div className="mx-auto mb-12 max-w-3xl text-center">
-          <span className="text-sm font-extrabold text-[#0d827a]">{t.companies.eyebrow}</span>
-          <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.companies.title}</h2>
-          <p className="mt-4 text-base leading-8 text-[#657872]">{t.companies.description}</p>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto max-w-3xl rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-8"
-        >
-          <div className="grid gap-5 md:grid-cols-2">
-            <Field label={t.companies.companyName} icon={Building2}>
-              <input
-                required
-                value={form.company_name}
-                onChange={(event) => setForm({ ...form, company_name: event.target.value })}
-                className="public-input"
-              />
-            </Field>
-            <Field label={t.companies.contactName}>
-              <input
-                required
-                value={form.contact_name}
-                onChange={(event) => setForm({ ...form, contact_name: event.target.value })}
-                className="public-input"
-              />
-            </Field>
-            <Field label={t.companies.commercialRegister}>
-              <input
-                required
-                value={form.commercial_register}
-                onChange={(event) => setForm({ ...form, commercial_register: event.target.value })}
-                className="public-input"
-              />
-            </Field>
-            <Field label={t.companies.email} icon={Mail}>
-              <input
-                required
-                type="email"
-                dir="ltr"
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                className="public-input text-start"
-              />
-            </Field>
-            <Field label={t.companies.phone} icon={Phone}>
-              <input
-                required
-                type="tel"
-                dir="ltr"
-                value={form.phone}
-                onChange={(event) => setForm({ ...form, phone: event.target.value })}
-                className="public-input text-start"
-              />
-            </Field>
-            <Field label={t.companies.address} icon={MapPin}>
-              <input
-                required
-                value={form.address}
-                onChange={(event) => setForm({ ...form, address: event.target.value })}
-                className="public-input"
-              />
-            </Field>
-          </div>
-
-          {error && (
-            <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
-          )}
-          {result && (
-            <p className="mt-5 rounded-2xl bg-[#e5f7f6] px-4 py-3 text-sm font-bold text-[#0d827a]">
-              {result.created ? t.companies.success : t.companies.alreadyRegistered}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-            ) : (
-              <Building2 className="h-5 w-5" aria-hidden="true" />
-            )}
-            {submitting ? t.companies.submitting : t.companies.submit}
-          </button>
-        </form>
-      </div>
-    </section>
-  );
-}
 
 function Field({
   label,

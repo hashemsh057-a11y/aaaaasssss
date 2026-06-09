@@ -356,6 +356,8 @@ class PublicMaintenanceRequestTrackingSerializer(serializers.ModelSerializer):
     client_company_name = serializers.CharField(source="client_company.company_name", read_only=True)
     issue_type_display = serializers.CharField(source="get_issue_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    assigned_engineer_name = serializers.SerializerMethodField()
+    assigned_engineer_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = MaintenanceRequest
@@ -368,9 +370,32 @@ class PublicMaintenanceRequestTrackingSerializer(serializers.ModelSerializer):
             "status",
             "status_display",
             "preferred_date",
+            "assigned_engineer_name",
+            "assigned_engineer_phone",
+            "assigned_public_engineer",
+            "assigned_at",
+            "in_progress_at",
+            "waiting_spare_parts_at",
+            "completed_at",
+            "closed_at",
+            "rejected_at",
             "created_at",
             "updated_at",
         ]
+
+    def get_assigned_engineer_name(self, obj):
+        if obj.assigned_public_engineer_id:
+            return obj.assigned_public_engineer.name
+        if obj.assigned_engineer_id:
+            return str(obj.assigned_engineer)
+        return None
+
+    def get_assigned_engineer_phone(self, obj):
+        if obj.assigned_public_engineer_id:
+            return obj.assigned_public_engineer.phone
+        if obj.assigned_engineer_id:
+            return obj.assigned_engineer.phone
+        return None
 
 
 class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
@@ -488,40 +513,6 @@ class PublicCompanyListSerializer(serializers.ModelSerializer):
             "contact_name",
             "email",
         ]
-
-
-class PublicCompanyRegistrationSerializer(serializers.Serializer):
-    """Standalone public company self-registration (no maintenance request).
-
-    Reuses the same _get_or_create_company / _build_unique_username flow that
-    PublicMaintenanceRequestCreateSerializer uses, so a company can register
-    once and later submit requests under the same profile.
-    """
-
-    contact_name = serializers.CharField(max_length=120, write_only=True)
-    company_name = serializers.CharField(max_length=180, write_only=True)
-    commercial_register = serializers.CharField(max_length=80, write_only=True)
-    email = serializers.EmailField(write_only=True)
-    phone = serializers.CharField(max_length=20, write_only=True)
-    address = serializers.CharField(write_only=True)
-
-    id = serializers.IntegerField(read_only=True)
-    created = serializers.BooleanField(read_only=True)
-
-    def validate_phone(self, value):
-        try:
-            phone_validator(value)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.messages) from exc
-        return value
-
-    @transaction.atomic
-    def create(self, validated_data):
-        # Reuse the existing helpers from PublicMaintenanceRequestCreateSerializer.
-        helper = PublicMaintenanceRequestCreateSerializer()
-        existing_ids = set(CompanyProfile.objects.values_list("id", flat=True))
-        company = helper._get_or_create_company(validated_data)
-        return {"id": company.id, "created": company.id not in existing_ids}
 
 
 class PublicEngineerSerializer(serializers.ModelSerializer):
