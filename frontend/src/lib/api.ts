@@ -16,8 +16,27 @@ import type {
   User
 } from "./types";
 
-const rawApiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+/**
+ * Sanitize the configured API base URL so a markdown-formatted value like
+ * "[https://host/api](https://host/api)" — which is exactly what got pasted
+ * into Cloudflare Pages env vars at one point — still resolves to the real
+ * https URL instead of producing a 404 for every request.
+ */
+function sanitizeApiBaseUrl(raw: string | undefined): string {
+  if (!raw) return "http://127.0.0.1:8000/api";
+  const trimmed = raw.trim();
+  // Markdown-link form: [text](url) — extract the inner URL.
+  const markdownMatch = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)]+)\)$/);
+  if (markdownMatch) return markdownMatch[1];
+  // First valid http(s) URL inside the value (handles pasted "[url](url)" too).
+  const urlMatch = trimmed.match(/https?:\/\/[A-Za-z0-9._:/-]+/);
+  if (urlMatch) return urlMatch[0];
+  return trimmed;
+}
+
+const rawApiBaseUrl = sanitizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
+);
 const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "maintenance_access_token";
 const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
