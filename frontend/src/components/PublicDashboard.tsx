@@ -6,7 +6,6 @@ import {
   Building2,
   CheckCircle2,
   ClipboardList,
-  Cog,
   Globe2,
   HardHat,
   Loader2,
@@ -161,18 +160,16 @@ export function PublicDashboard() {
     >
       <header className="sticky top-0 z-40 border-b border-white/70 bg-[#fbfdf9]/85 backdrop-blur-xl">
         <div className="container mx-auto flex min-h-[72px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <span dir="ltr" className="flex items-center gap-2.5">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#15294d] via-[#1b3a6b] to-[#1f86ec] text-white shadow-sm">
-              <Cog className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <span className="leading-none">
-              <span className="block text-xl font-extrabold tracking-tight sm:text-2xl">
-                <span className="text-[#15294d]">Engi</span>
-                <span className="text-[#1f86ec]">Flow</span>
-              </span>
-              <span className="mt-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-[#7088a0]">
-                {t.console}
-              </span>
+          <span dir="ltr" className="flex items-center gap-3">
+            <img
+              src="/engiflow-logo.png"
+              alt="EngiFlow"
+              width={56}
+              height={56}
+              className="h-14 w-14 object-contain"
+            />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7088a0]">
+              {t.console}
             </span>
           </span>
 

@@ -8,7 +8,6 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
-  Cog,
   Globe2,
   HardHat,
   Loader2,
@@ -1150,15 +1149,18 @@ export function PublicLanding() {
 }
 
 function BrandWordmark() {
+  // Image lives in /frontend/public/engiflow-logo.png and is served from the
+  // site root. The logo already contains the full "EngiFlow" wordmark, so we
+  // do not render any text alongside it.
   return (
-    <span dir="ltr" className="flex items-center gap-2.5">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#15294d] via-[#1b3a6b] to-[#1f86ec] text-white shadow-sm">
-        <Cog className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <span className="text-xl font-extrabold leading-none tracking-tight sm:text-2xl">
-        <span className="text-[#15294d]">Engi</span>
-        <span className="text-[#1f86ec]">Flow</span>
-      </span>
+    <span dir="ltr" className="flex items-center">
+      <img
+        src="/engiflow-logo.png"
+        alt="EngiFlow"
+        width={56}
+        height={56}
+        className="h-14 w-14 object-contain sm:h-16 sm:w-16"
+      />
     </span>
   );
 }
