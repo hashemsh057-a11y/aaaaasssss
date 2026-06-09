@@ -148,6 +148,30 @@ export type PublicEngineerPayload = {
   specialty: MaintenanceSpecialty;
 };
 
+export type PublicCompany = {
+  id: number;
+  company_name: string;
+  commercial_register: string;
+  contact_phone: string;
+  address: string;
+  contact_name: string;
+  email: string;
+};
+
+export type PublicCompanyPayload = {
+  contact_name: string;
+  company_name: string;
+  commercial_register: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
+export type PublicCompanyRegistrationResult = {
+  id: number;
+  created: boolean;
+};
+
 export type PublicMaintenanceRequestPayload = {
   contact_name: string;
   company_name: string;

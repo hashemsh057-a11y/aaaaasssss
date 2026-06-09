@@ -20,8 +20,9 @@ import {
   Search,
   ShieldCheck,
   Snowflake,
-  Trash2,
   UserPlus,
+  Users,
+  ShieldAlert,
   Wrench,
   X,
   Zap,
@@ -30,8 +31,8 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  createPublicCompany,
   createPublicEngineer,
-  deletePublicEngineer,
   getPublicEngineers,
   getPublicImpactStatistics,
   submitPublicMaintenanceRequest,
@@ -42,6 +43,7 @@ import type {
   MaintenanceSpecialty,
   MaintenanceStatus,
   Priority,
+  PublicCompanyPayload,
   PublicEngineer,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
@@ -62,6 +64,7 @@ type Copy = {
     request: string;
     stats: string;
     engineers: string;
+    companies: string;
     login: string;
     language: string;
   };
@@ -111,6 +114,25 @@ type Copy = {
     countLabel: string;
     empty: string;
     remove: string;
+    error: string;
+    countHeadline: string;
+    countCaption: string;
+    privacyNote: string;
+  };
+  companies: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    companyName: string;
+    contactName: string;
+    commercialRegister: string;
+    email: string;
+    phone: string;
+    address: string;
+    submit: string;
+    submitting: string;
+    success: string;
+    alreadyRegistered: string;
     error: string;
   };
   request: {
@@ -175,6 +197,7 @@ const copy: Record<Language, Copy> = {
       request: "تسجيل طلب",
       stats: "المؤشرات",
       engineers: "المهندسون",
+      companies: "تسجيل شركة",
       login: "دخول النظام",
       language: "English"
     },
@@ -215,17 +238,36 @@ const copy: Record<Language, Copy> = {
     engineers: {
       eyebrow: "فريق العمل",
       title: "إضافة مهندس إلى الفريق",
-      description: "أضف بيانات المهندس الأساسية لتُسجَّل في المنظومة وتظهر ضمن قائمة فريق الصيانة على كل الأجهزة.",
+      description: "أضف بيانات المهندس الأساسية ليُسجَّل في المنظومة. لحماية الخصوصية، تظهر هنا أعداد الفريق فقط، أما التفاصيل الكاملة فتبقى في لوحة المتابعة الخاصة.",
       name: "اسم المهندس",
       phone: "رقم الهاتف",
       specialty: "التخصص",
       submit: "إضافة المهندس",
       submitting: "جارٍ الحفظ...",
-      listTitle: "قائمة المهندسين",
+      listTitle: "إحصائية الفريق",
       countLabel: "مهندس",
       empty: "لا يوجد مهندسون مسجّلون بعد. ابدأ بإضافة أول مهندس إلى الفريق.",
       remove: "حذف المهندس",
-      error: "تعذّر حفظ البيانات. تحقق من الاتصال وحاول مرة أخرى."
+      error: "تعذّر حفظ البيانات. تحقق من الاتصال وحاول مرة أخرى.",
+      countHeadline: "عضو في فريق الصيانة",
+      countCaption: "مهندسون وفنيون متعدّدو التخصصات جاهزون لاستلام البلاغات.",
+      privacyNote: "التفاصيل الكاملة (الأسماء وأرقام الهواتف) لا تُعرض على الصفحة العامة، وتبقى متاحة فقط للمسؤولين عبر لوحة المتابعة."
+    },
+    companies: {
+      eyebrow: "للشركات",
+      title: "سجّل شركتك في المنظومة",
+      description: "أنشئ ملف شركتك مرّة واحدة، ليصبح بإمكانك تقديم بلاغات الصيانة ومتابعتها تحت اسم شركتك. التسجيل لا يتطلّب كلمة مرور.",
+      companyName: "اسم الشركة",
+      contactName: "اسم المسؤول",
+      commercialRegister: "السجل التجاري",
+      email: "البريد الإلكتروني",
+      phone: "رقم الهاتف",
+      address: "العنوان",
+      submit: "تسجيل الشركة",
+      submitting: "جارٍ التسجيل...",
+      success: "تم تسجيل شركتك بنجاح في المنظومة.",
+      alreadyRegistered: "هذه الشركة مسجّلة مسبقًا. تم تأكيد بياناتها.",
+      error: "تعذّر إتمام التسجيل. تحقق من البيانات وحاول مرة أخرى."
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -271,6 +313,7 @@ const copy: Record<Language, Copy> = {
       request: "Create Request",
       stats: "Stats",
       engineers: "Engineers",
+      companies: "Register company",
       login: "System Login",
       language: "العربية"
     },
@@ -311,17 +354,36 @@ const copy: Record<Language, Copy> = {
     engineers: {
       eyebrow: "Our team",
       title: "Add an engineer to the team",
-      description: "Add an engineer's core details to register them in the system and list them for everyone across devices.",
+      description: "Add an engineer's core details to register them. For privacy, only counts are shown publicly — full details stay inside the private operations dashboard.",
       name: "Engineer name",
       phone: "Phone number",
       specialty: "Specialty",
       submit: "Add engineer",
       submitting: "Saving...",
-      listTitle: "Engineers list",
+      listTitle: "Team headcount",
       countLabel: "engineers",
       empty: "No engineers registered yet. Add the first engineer to the team.",
       remove: "Remove engineer",
-      error: "Could not save. Check your connection and try again."
+      error: "Could not save. Check your connection and try again.",
+      countHeadline: "members on the maintenance team",
+      countCaption: "Multi-disciplinary engineers and technicians ready to take on reports.",
+      privacyNote: "Full details (names and phones) are not shown on the public page — only administrators see them in the operations dashboard."
+    },
+    companies: {
+      eyebrow: "For companies",
+      title: "Register your company in the system",
+      description: "Create your company profile once so future maintenance requests are tied to it. No password required.",
+      companyName: "Company name",
+      contactName: "Contact person",
+      commercialRegister: "Commercial register",
+      email: "Email",
+      phone: "Phone",
+      address: "Address",
+      submit: "Register company",
+      submitting: "Registering...",
+      success: "Your company has been registered successfully.",
+      alreadyRegistered: "This company is already registered. Its profile is confirmed.",
+      error: "Registration failed. Check your details and try again."
     },
     request: {
       eyebrow: "New request",
@@ -569,6 +631,7 @@ export function PublicLanding() {
     { href: "#services", label: t.nav.services },
     { href: "#workflow", label: t.nav.workflow },
     { href: "#engineers", label: t.nav.engineers },
+    { href: "#companies", label: t.nav.companies },
     { href: "#stats", label: t.nav.stats },
     { href: "#request", label: t.nav.request }
   ];
@@ -841,6 +904,8 @@ export function PublicLanding() {
 
         <EngineersSection copy={t} language={language} />
 
+        <CompanyRegistrationSection copy={t} language={language} />
+
         <section id="stats" className="bg-[#eef7f6] py-20">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mb-12 max-w-2xl">
@@ -1006,12 +1071,9 @@ export function PublicLanding() {
         </section>
       </main>
 
-      <footer className="bg-[#fbfdf9] py-10">
-        <div className="container mx-auto flex flex-col items-start justify-between gap-5 px-4 text-sm text-[#657872] sm:px-6 md:flex-row md:items-center">
-          <div className="flex flex-col gap-1">
-            <BrandWordmark />
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9aaba5]">{t.tagline}</span>
-          </div>
+      <footer className="bg-[#fbfdf9] py-8">
+        <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-center text-sm text-[#657872] sm:px-6 md:flex-row md:text-start">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#9aaba5]">{t.tagline}</span>
           <p className="m-0 max-w-md">{t.footer}</p>
         </div>
       </footer>
@@ -1102,20 +1164,24 @@ function BrandWordmark() {
 }
 
 function EngineersSection({ copy: t, language }: { copy: Copy; language: Language }) {
-  const isRtl = t.dir === "rtl";
-  const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
+  const [count, setCount] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [specialty, setSpecialty] = useState<MaintenanceSpecialty>("ELECTRICITY");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState(false);
+  const numberFormat = useMemo(
+    () => new Intl.NumberFormat(language === "ar" ? "ar-LY" : "en-US"),
+    [language]
+  );
 
   useEffect(() => {
     let active = true;
     getPublicEngineers()
       .then((data) => {
         if (active) {
-          setEngineers(data);
+          setCount(data.length);
         }
       })
       .catch(() => {
@@ -1135,27 +1201,17 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
     }
     setSubmitting(true);
     setError(null);
+    setJustAdded(false);
     try {
-      const created = await createPublicEngineer({ name: trimmedName, phone: trimmedPhone, specialty });
-      setEngineers((previous) => [created, ...previous]);
+      await createPublicEngineer({ name: trimmedName, phone: trimmedPhone, specialty });
+      setCount((previous) => (previous ?? 0) + 1);
       setName("");
       setPhone("");
+      setJustAdded(true);
     } catch {
       setError(t.engineers.error);
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleRemove(id: number) {
-    const previous = engineers;
-    setEngineers((current) => current.filter((engineer) => engineer.id !== id));
-    setError(null);
-    try {
-      await deletePublicEngineer(id);
-    } catch {
-      setEngineers(previous);
-      setError(t.engineers.error);
     }
   }
 
@@ -1225,54 +1281,177 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             </button>
           </form>
 
-          <div>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-lg font-extrabold text-[#17312d]">{t.engineers.listTitle}</h3>
-              <span className="rounded-full bg-[#e5f7f6] px-3 py-1 text-sm font-extrabold text-[#0d827a]">
-                {engineers.length} {t.engineers.countLabel}
-              </span>
+          <div className="grid gap-5">
+            <div className="rounded-[2rem] bg-white/72 p-8 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-10">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-extrabold uppercase tracking-wider text-[#0d827a]">
+                  {t.engineers.listTitle}
+                </span>
+                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
+                  <Users className="h-6 w-6" aria-hidden="true" />
+                </span>
+              </div>
+              <div className="mt-6 flex items-baseline gap-3">
+                <strong className="text-6xl font-extrabold text-[#0d827a] md:text-7xl">
+                  {count === null ? "—" : numberFormat.format(count)}
+                </strong>
+                <span className="text-base font-bold text-[#5d716b] md:text-lg">{t.engineers.countHeadline}</span>
+              </div>
+              <p className="mt-4 text-sm leading-7 text-[#657872]">{t.engineers.countCaption}</p>
+              {justAdded && (
+                <p className="mt-4 rounded-2xl bg-[#e5f7f6] px-4 py-3 text-sm font-bold text-[#0d827a]">
+                  {t.engineers.submit} ✓
+                </p>
+              )}
             </div>
 
-            {engineers.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-[#cfe6e3] bg-[#f4faf8] p-10 text-center text-sm leading-7 text-[#657872]">
-                {t.engineers.empty}
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                {engineers.map((engineer) => (
-                  <div
-                    key={engineer.id}
-                    className="flex items-center justify-between gap-4 rounded-3xl bg-[#f4faf8] p-4 transition-colors hover:bg-[#eef8f7]"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#e1f4f3] text-[#0d827a] shadow-sm">
-                        <HardHat className="h-6 w-6" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <strong className="block truncate text-[#17312d]">{engineer.name}</strong>
-                        <span className="block truncate text-sm text-[#657872]">
-                          {getSpecialtyName(engineer.specialty, language)}
-                        </span>
-                        <span dir="ltr" className={`block truncate text-sm font-bold text-[#0d827a] ${isRtl ? "text-right" : "text-left"}`}>
-                          {engineer.phone}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(engineer.id)}
-                      aria-label={t.engineers.remove}
-                      title={t.engineers.remove}
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#c84d3a] shadow-sm transition-colors hover:bg-[#fdecea]"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-start gap-3 rounded-3xl border border-dashed border-[#cfe6e3] bg-[#f6fbfa] p-5 text-sm leading-7 text-[#5d716b]">
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e5f7f6] text-[#0d827a]">
+                <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <p className="m-0">{t.engineers.privacyNote}</p>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function CompanyRegistrationSection({ copy: t }: { copy: Copy; language: Language }) {
+  const [form, setForm] = useState<PublicCompanyPayload>({
+    contact_name: "",
+    company_name: "",
+    commercial_register: "",
+    email: "",
+    phone: "",
+    address: ""
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ id: number; created: boolean } | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    setResult(null);
+    try {
+      const response = await createPublicCompany({
+        ...form,
+        contact_name: form.contact_name.trim(),
+        company_name: form.company_name.trim(),
+        commercial_register: form.commercial_register.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim()
+      });
+      setResult(response);
+      setForm({
+        contact_name: "",
+        company_name: "",
+        commercial_register: "",
+        email: "",
+        phone: "",
+        address: ""
+      });
+    } catch {
+      setError(t.companies.error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section id="companies" className="bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] py-20 sm:py-24">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mx-auto mb-12 max-w-3xl text-center">
+          <span className="text-sm font-extrabold text-[#0d827a]">{t.companies.eyebrow}</span>
+          <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#17312d] md:text-4xl">{t.companies.title}</h2>
+          <p className="mt-4 text-base leading-8 text-[#657872]">{t.companies.description}</p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mx-auto max-w-3xl rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a5ccd0]/20 backdrop-blur-xl sm:p-8"
+        >
+          <div className="grid gap-5 md:grid-cols-2">
+            <Field label={t.companies.companyName} icon={Building2}>
+              <input
+                required
+                value={form.company_name}
+                onChange={(event) => setForm({ ...form, company_name: event.target.value })}
+                className="public-input"
+              />
+            </Field>
+            <Field label={t.companies.contactName}>
+              <input
+                required
+                value={form.contact_name}
+                onChange={(event) => setForm({ ...form, contact_name: event.target.value })}
+                className="public-input"
+              />
+            </Field>
+            <Field label={t.companies.commercialRegister}>
+              <input
+                required
+                value={form.commercial_register}
+                onChange={(event) => setForm({ ...form, commercial_register: event.target.value })}
+                className="public-input"
+              />
+            </Field>
+            <Field label={t.companies.email} icon={Mail}>
+              <input
+                required
+                type="email"
+                dir="ltr"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                className="public-input text-start"
+              />
+            </Field>
+            <Field label={t.companies.phone} icon={Phone}>
+              <input
+                required
+                type="tel"
+                dir="ltr"
+                value={form.phone}
+                onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                className="public-input text-start"
+              />
+            </Field>
+            <Field label={t.companies.address} icon={MapPin}>
+              <input
+                required
+                value={form.address}
+                onChange={(event) => setForm({ ...form, address: event.target.value })}
+                className="public-input"
+              />
+            </Field>
+          </div>
+
+          {error && (
+            <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
+          )}
+          {result && (
+            <p className="mt-5 rounded-2xl bg-[#e5f7f6] px-4 py-3 text-sm font-bold text-[#0d827a]">
+              {result.created ? t.companies.success : t.companies.alreadyRegistered}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0f8d86] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#0f8d86]/20 transition-all hover:-translate-y-1 hover:bg-[#0d7b75] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Building2 className="h-5 w-5" aria-hidden="true" />
+            )}
+            {submitting ? t.companies.submitting : t.companies.submit}
+          </button>
+        </form>
       </div>
     </section>
   );

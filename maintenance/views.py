@@ -19,6 +19,8 @@ from .serializers import (
     CompanyProfileSerializer,
     EngineerProfileSerializer,
     MaintenanceRequestSerializer,
+    PublicCompanyListSerializer,
+    PublicCompanyRegistrationSerializer,
     PublicContactInquirySerializer,
     PublicEngineerSerializer,
     PublicMaintenanceRequestCreateSerializer,
@@ -178,6 +180,27 @@ class PublicMaintenanceRequestCreateAPIView(APIView):
         maintenance_request = serializer.save()
         response_serializer = PublicMaintenanceRequestTrackingSerializer(maintenance_request)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PublicCompanyListAPIView(generics.ListAPIView):
+    """Open read-only list of registered companies for /dashboard."""
+
+    permission_classes = [AllowAny]
+    serializer_class = PublicCompanyListSerializer
+    queryset = CompanyProfile.objects.select_related("user").all()
+    pagination_class = None
+
+
+class PublicCompanyRegistrationAPIView(APIView):
+    """Open POST endpoint to let a company self-register without a request."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PublicCompanyRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+        return Response(result, status=status.HTTP_201_CREATED)
 
 
 class PublicEngineerListCreateAPIView(generics.ListCreateAPIView):

@@ -467,6 +467,63 @@ class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
         return maintenance_request
 
 
+class PublicCompanyListSerializer(serializers.ModelSerializer):
+    """Read-only public list of registered companies for the open dashboard.
+
+    Exposes the full business details (company name, register, phone, address)
+    because the dashboard is the user's "professional" admin view per request.
+    """
+
+    contact_name = serializers.CharField(source="user.first_name", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = CompanyProfile
+        fields = [
+            "id",
+            "company_name",
+            "commercial_register",
+            "contact_phone",
+            "address",
+            "contact_name",
+            "email",
+        ]
+
+
+class PublicCompanyRegistrationSerializer(serializers.Serializer):
+    """Standalone public company self-registration (no maintenance request).
+
+    Reuses the same _get_or_create_company / _build_unique_username flow that
+    PublicMaintenanceRequestCreateSerializer uses, so a company can register
+    once and later submit requests under the same profile.
+    """
+
+    contact_name = serializers.CharField(max_length=120, write_only=True)
+    company_name = serializers.CharField(max_length=180, write_only=True)
+    commercial_register = serializers.CharField(max_length=80, write_only=True)
+    email = serializers.EmailField(write_only=True)
+    phone = serializers.CharField(max_length=20, write_only=True)
+    address = serializers.CharField(write_only=True)
+
+    id = serializers.IntegerField(read_only=True)
+    created = serializers.BooleanField(read_only=True)
+
+    def validate_phone(self, value):
+        try:
+            phone_validator(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        # Reuse the existing helpers from PublicMaintenanceRequestCreateSerializer.
+        helper = PublicMaintenanceRequestCreateSerializer()
+        existing_ids = set(CompanyProfile.objects.values_list("id", flat=True))
+        company = helper._get_or_create_company(validated_data)
+        return {"id": company.id, "created": company.id not in existing_ids}
+
+
 class PublicEngineerSerializer(serializers.ModelSerializer):
     specialty_display = serializers.CharField(source="get_specialty_display", read_only=True)
 

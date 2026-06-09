@@ -4,6 +4,9 @@ import type {
   EngineerProfile,
   MaintenanceRequest,
   MaintenanceStatus,
+  PublicCompany,
+  PublicCompanyPayload,
+  PublicCompanyRegistrationResult,
   PublicContactPayload,
   PublicEngineer,
   PublicEngineerPayload,
@@ -210,5 +213,16 @@ export function createPublicEngineer(payload: PublicEngineerPayload) {
 export function deletePublicEngineer(id: number) {
   return apiFetch<void>(`/public/engineers/${id}/`, {
     method: "DELETE"
+  });
+}
+
+export function getPublicCompanies() {
+  return apiFetch<PublicCompany[]>("/public/companies-list/");
+}
+
+export function createPublicCompany(payload: PublicCompanyPayload) {
+  return apiFetch<PublicCompanyRegistrationResult>("/public/companies/", {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 }
