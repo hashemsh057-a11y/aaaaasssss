@@ -179,9 +179,13 @@ def _engineer_report() -> ReportSpec:
         rows.append(
             [
                 str(engineer),
-                engineer.employee_id,
+                f"{engineer.department} ({engineer.employee_id})",
+                "مهندس صيانة",
                 SPECIALTY_AR.get(engineer.specialty, engineer.specialty),
                 engineer.phone,
+                engineer.user.email,
+                engineer.experience_years,
+                engineer.get_availability_status_display(),
                 assigned.count(),
                 assigned.filter(status__in=[MaintenanceRequest.Status.COMPLETED, MaintenanceRequest.Status.CLOSED]).count(),
                 _money(assigned.aggregate(total=Sum("cost"))["total"] or Decimal("0")),
@@ -192,9 +196,13 @@ def _engineer_report() -> ReportSpec:
         rows.append(
             [
                 engineer.name,
-                "دليل عام",
+                engineer.department or "دليل عام",
+                engineer.profession or "-",
                 SPECIALTY_AR.get(engineer.specialty, engineer.specialty),
                 engineer.phone,
+                engineer.email or "-",
+                engineer.experience_years,
+                "متوفر" if engineer.is_available else "غير متوفر",
                 assigned.count(),
                 assigned.filter(status__in=[MaintenanceRequest.Status.COMPLETED, MaintenanceRequest.Status.CLOSED]).count(),
                 _money(assigned.aggregate(total=Sum("cost"))["total"] or Decimal("0")),
@@ -209,7 +217,19 @@ def _engineer_report() -> ReportSpec:
         sheets=[
             ReportSheet(
                 name="أداء المهندسين",
-                headers=["المهندس", "الرقم الوظيفي", "التخصص", "الهاتف", "الطلبات", "المكتملة", "التكلفة"],
+                headers=[
+                    "المهندس",
+                    "القسم / الرقم الوظيفي",
+                    "المهنة",
+                    "التخصص",
+                    "الهاتف",
+                    "البريد الإلكتروني",
+                    "سنوات الخبرة",
+                    "التوفر",
+                    "الطلبات",
+                    "المكتملة",
+                    "التكلفة",
+                ],
                 rows=rows,
             )
         ],

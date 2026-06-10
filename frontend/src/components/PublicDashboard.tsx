@@ -40,6 +40,7 @@ import {
   setRequestCost
 } from "@/src/lib/api";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
+import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
 import { DashboardLogin, useDashboardSession } from "./DashboardLogin";
 import type {
   Language,
@@ -115,7 +116,6 @@ export function PublicDashboard() {
 
   const t = copy[language];
   const dir = languages[language].dir;
-  const isRtl = dir === "rtl";
   const numberFormat = useMemo(
     () => new Intl.NumberFormat(language === "ar" ? "ar-LY" : "en-US"),
     [language]
@@ -369,25 +369,48 @@ export function PublicDashboard() {
               {engineers.map((engineer) => (
                 <article
                   key={engineer.id}
-                  className="rounded-3xl bg-[#f4f8fd] p-4 transition-colors hover:bg-[#e3edfb]"
+                  className="rounded-3xl bg-[#f4f8fd] p-5 transition-colors hover:bg-[#e3edfb]"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
-                      <HardHat className="h-6 w-6" aria-hidden="true" />
-                    </span>
+                  <div className="flex items-start gap-3">
+                    {engineer.avatar ? (
+                      <img
+                        src={engineer.avatar}
+                        alt={engineer.name}
+                        className="h-16 w-16 shrink-0 rounded-2xl object-cover shadow-sm"
+                      />
+                    ) : (
+                      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
+                        <HardHat className="h-7 w-7" aria-hidden="true" />
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <strong className="block truncate text-base text-[#15294d]">{engineer.name}</strong>
                       <span className="block truncate text-sm text-[#5b6b85]">
-                        {getSpecialtyLabel(engineer.specialty, language)}
+                        {engineer.profession} · {getSpecialtyLabel(engineer.specialty, language)}
+                      </span>
+                      <span
+                        className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${
+                          engineer.is_available
+                            ? "bg-[#e3f3e7] text-[#2c8b4b]"
+                            : "bg-[#eef3f1] text-[#5b6b85]"
+                        }`}
+                      >
+                        {engineer.is_available ? t.availableForWork : t.unavailableForWork}
                       </span>
                     </div>
                   </div>
-                  <div
-                    className={`mt-3 flex items-center gap-2 text-sm font-bold text-[#1567c6] ${isRtl ? "justify-end" : "justify-start"}`}
-                  >
-                    <Phone className="h-4 w-4" aria-hidden="true" />
-                    <span dir="ltr">{engineer.phone}</span>
-                  </div>
+                  <dl className="mt-4 grid gap-2 border-t border-[#d7e4f5] pt-4 text-sm">
+                    <Row label={t.departmentLabel}>{engineer.department || "—"}</Row>
+                    <Row label={t.experienceYears}>
+                      {numberFormat.format(engineer.experience_years)}
+                    </Row>
+                    <Row label={t.phone} ltr>
+                      {engineer.phone}
+                    </Row>
+                    <Row label={t.email} ltr>
+                      {engineer.email}
+                    </Row>
+                  </dl>
                 </article>
               ))}
             </div>
@@ -437,7 +460,18 @@ export function PublicDashboard() {
                       </Row>
                     )}
                     <Row label={t.address} icon={<MapPin className="h-3.5 w-3.5" aria-hidden="true" />}>
-                      {company.address || "—"}
+                      {company.address ? (
+                        <a
+                          href={getGoogleMapsSearchUrl(company.address)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-extrabold text-[#1567c6] underline decoration-[#bfd2ee] underline-offset-4"
+                        >
+                          {company.address}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
                     </Row>
                   </dl>
                 </article>
@@ -615,7 +649,13 @@ function AddEngineerCard({
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState("");
   const [specialty, setSpecialty] = useState<MaintenanceSpecialty>("ELECTRICITY");
+  const [profession, setProfession] = useState("");
+  const [experienceYears, setExperienceYears] = useState("0");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarInputKey, setAvatarInputKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -624,15 +664,32 @@ function AddEngineerCard({
     event.preventDefault();
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
-    if (!trimmedName || !trimmedPhone) return;
+    if (!trimmedName || !trimmedPhone || !email.trim() || !department.trim() || !profession.trim()) {
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setSuccess(false);
     try {
-      const created = await createPublicEngineer({ name: trimmedName, phone: trimmedPhone, specialty });
+      const created = await createPublicEngineer({
+        name: trimmedName,
+        phone: trimmedPhone,
+        email: email.trim(),
+        department: department.trim(),
+        specialty,
+        profession: profession.trim(),
+        experience_years: Number(experienceYears),
+        avatar
+      });
       onAdded(created);
       setName("");
       setPhone("");
+      setEmail("");
+      setDepartment("");
+      setProfession("");
+      setExperienceYears("0");
+      setAvatar(null);
+      setAvatarInputKey((key) => key + 1);
       setSuccess(true);
     } catch {
       setError(t.engineerAddError);
@@ -650,7 +707,7 @@ function AddEngineerCard({
         <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.addEngineerHere}</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-3">
+      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="grid gap-2 text-sm">
           <span className="font-extrabold text-[#5b6b85]">{t.nameLabel}</span>
           <input
@@ -672,6 +729,26 @@ function AddEngineerCard({
           />
         </label>
         <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.email}</span>
+          <input
+            required
+            type="email"
+            dir="ltr"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="public-input text-start"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.departmentLabel}</span>
+          <input
+            required
+            value={department}
+            onChange={(event) => setDepartment(event.target.value)}
+            className="public-input"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
           <span className="font-extrabold text-[#5b6b85]">{t.specialtyLabel}</span>
           <select
             value={specialty}
@@ -685,8 +762,39 @@ function AddEngineerCard({
             ))}
           </select>
         </label>
+        <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.professionLabel}</span>
+          <input
+            required
+            value={profession}
+            onChange={(event) => setProfession(event.target.value)}
+            className="public-input"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.experienceYears}</span>
+          <input
+            required
+            type="number"
+            min="0"
+            max="60"
+            value={experienceYears}
+            onChange={(event) => setExperienceYears(event.target.value)}
+            className="public-input"
+          />
+        </label>
+        <label className="grid gap-2 text-sm">
+          <span className="font-extrabold text-[#5b6b85]">{t.engineerPhoto}</span>
+          <input
+            key={avatarInputKey}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            onChange={(event) => setAvatar(event.target.files?.[0] ?? null)}
+            className="public-input file:me-3 file:border-0 file:bg-transparent file:font-bold file:text-[#1567c6]"
+          />
+        </label>
 
-        <div className="md:col-span-3">
+        <div className="md:col-span-2 xl:col-span-4">
           {error && (
             <p className="mt-1 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
           )}
@@ -698,7 +806,7 @@ function AddEngineerCard({
           <button
             type="submit"
             disabled={submitting}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#1f86ec] px-6 py-3 text-sm font-extrabold text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
+            className="public-action mt-3 bg-[#1f86ec] text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -744,7 +852,7 @@ function RequestCard({
 
   // Engineers that match this request's specialty (the only valid assignees).
   const matchingEngineers = useMemo(
-    () => engineers.filter((e) => e.specialty === request.issue_type),
+    () => engineers.filter((engineer) => engineer.specialty === request.issue_type && engineer.is_available),
     [engineers, request.issue_type]
   );
 

@@ -9,6 +9,7 @@ import type {
   PublicContactPayload,
   PublicEngineer,
   PublicEngineerPayload,
+  PublicEngineerRegistration,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest,
@@ -224,9 +225,35 @@ export function getPublicEngineers() {
 }
 
 export function createPublicEngineer(payload: PublicEngineerPayload) {
-  return apiFetch<PublicEngineer>("/public/engineers/", {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append("phone", payload.phone);
+  formData.append("email", payload.email);
+  formData.append("department", payload.department);
+  formData.append("specialty", payload.specialty);
+  formData.append("profession", payload.profession);
+  formData.append("experience_years", String(payload.experience_years));
+  formData.append("is_available", "true");
+  if (payload.avatar) {
+    formData.append("avatar", payload.avatar);
+  }
+  return apiFetch<PublicEngineerRegistration>("/public/engineers/", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: formData
+  });
+}
+
+export function setPublicEngineerAvailability(
+  id: number,
+  availabilityToken: string,
+  isAvailable: boolean
+) {
+  return apiFetch<PublicEngineer>(`/public/engineers/${id}/availability/`, {
+    method: "POST",
+    body: JSON.stringify({
+      availability_token: availabilityToken,
+      is_available: isAvailable
+    })
   });
 }
 

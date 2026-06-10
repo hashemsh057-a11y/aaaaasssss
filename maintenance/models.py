@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -388,19 +390,34 @@ class RequestEvidence(models.Model):
 class PublicEngineer(models.Model):
     """Lightweight engineer directory entry registered from the public site.
 
-    Captures only the basics (name, phone, specialty) so engineers can be
-    listed without provisioning a full authenticated EngineerProfile/User.
+    Captures a public registration profile without provisioning a full
+    authenticated EngineerProfile/User.
     """
 
     name = models.CharField(max_length=120)
     phone = models.CharField(max_length=20, validators=[phone_validator])
+    email = models.EmailField(blank=True, default="", db_index=True)
+    department = models.CharField(max_length=120, blank=True, default="")
     specialty = models.CharField(max_length=32, choices=MaintenanceSpecialty.choices)
+    profession = models.CharField(max_length=120, blank=True, default="")
+    avatar = models.ImageField(
+        upload_to="engineers/public/%Y/%m/",
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    experience_years = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(60)],
+    )
+    is_available = models.BooleanField(default=True)
+    availability_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["specialty"]),
+            models.Index(fields=["specialty", "is_available"]),
             models.Index(fields=["created_at"]),
         ]
 

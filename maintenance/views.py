@@ -1,3 +1,5 @@
+import secrets
+
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
@@ -26,6 +28,7 @@ from .serializers import (
     MaintenanceRequestSerializer,
     PublicCompanyListSerializer,
     PublicContactInquirySerializer,
+    PublicEngineerCreateSerializer,
     PublicEngineerSerializer,
     PublicMaintenanceRequestCreateSerializer,
     PublicMaintenanceRequestTrackingSerializer,
@@ -202,15 +205,38 @@ class PublicCompanyListAPIView(generics.ListAPIView):
 
 class PublicEngineerListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
-    serializer_class = PublicEngineerSerializer
     queryset = PublicEngineer.objects.all()
     pagination_class = None
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return PublicEngineerCreateSerializer
+        return PublicEngineerSerializer
 
 
 class PublicEngineerDeleteAPIView(generics.DestroyAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicEngineerSerializer
     queryset = PublicEngineer.objects.all()
+
+
+class PublicEngineerAvailabilityAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        engineer = get_object_or_404(PublicEngineer, pk=pk)
+        raw_token = request.data.get("availability_token")
+        if not raw_token or not secrets.compare_digest(str(engineer.availability_token), str(raw_token)):
+            return Response(
+                {"detail": "Invalid engineer management token."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        availability = drf_serializers.BooleanField().run_validation(
+            request.data.get("is_available")
+        )
+        engineer.is_available = availability
+        engineer.save(update_fields=["is_available"])
+        return Response(PublicEngineerSerializer(engineer, context={"request": request}).data)
 
 
 class PublicAdminRequestTransitionAPIView(APIView):
@@ -266,6 +292,10 @@ class PublicAdminRequestTransitionAPIView(APIView):
                     {
                         "assigned_public_engineer_id": "Engineer specialty must match the request issue type."
                     }
+                )
+            if not public_engineer.is_available:
+                raise drf_serializers.ValidationError(
+                    {"assigned_public_engineer_id": "Engineer is currently unavailable."}
                 )
             maintenance_request.assigned_public_engineer = public_engineer
 

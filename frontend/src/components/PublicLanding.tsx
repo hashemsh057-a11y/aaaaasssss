@@ -33,14 +33,17 @@ import {
   createPublicEngineer,
   getPublicEngineers,
   getPublicImpactStatistics,
+  setPublicEngineerAvailability,
   submitPublicMaintenanceRequest,
   trackPublicRequest
 } from "@/src/lib/api";
+import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
 import type {
   Language,
   MaintenanceSpecialty,
   MaintenanceStatus,
   Priority,
+  PublicEngineer,
   PublicImpactStatistics,
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest
@@ -102,7 +105,12 @@ type Copy = {
     description: string;
     name: string;
     phone: string;
+    email: string;
+    department: string;
     specialty: string;
+    profession: string;
+    experience: string;
+    photo: string;
     submit: string;
     submitting: string;
     listTitle: string;
@@ -113,6 +121,11 @@ type Copy = {
     countHeadline: string;
     countCaption: string;
     privacyNote: string;
+    available: string;
+    unavailable: string;
+    availabilityTitle: string;
+    availabilityDescription: string;
+    availabilityError: string;
   };
   request: {
     eyebrow: string;
@@ -124,6 +137,7 @@ type Copy = {
     email: string;
     phone: string;
     address: string;
+    openMaps: string;
     issueType: string;
     priority: string;
     location: string;
@@ -219,7 +233,12 @@ const copy: Record<Language, Copy> = {
       description: "أضف بيانات المهندس الأساسية ليُسجَّل في المنظومة. لحماية الخصوصية، تظهر هنا أعداد الفريق فقط، أما التفاصيل الكاملة فتبقى في لوحة المتابعة الخاصة.",
       name: "اسم المهندس",
       phone: "رقم الهاتف",
+      email: "البريد الإلكتروني",
+      department: "القسم",
       specialty: "التخصص",
+      profession: "المهنة",
+      experience: "سنوات الخبرة",
+      photo: "صورة المهندس",
       submit: "إضافة المهندس",
       submitting: "جارٍ الحفظ...",
       listTitle: "إحصائية الفريق",
@@ -229,7 +248,12 @@ const copy: Record<Language, Copy> = {
       error: "تعذّر حفظ البيانات. تحقق من الاتصال وحاول مرة أخرى.",
       countHeadline: "عضو في فريق الصيانة",
       countCaption: "مهندسون وفنيون متعدّدو التخصصات جاهزون لاستلام البلاغات.",
-      privacyNote: "التفاصيل الكاملة (الأسماء وأرقام الهواتف) لا تُعرض على الصفحة العامة، وتبقى متاحة فقط للمسؤولين عبر لوحة المتابعة."
+      privacyNote: "التفاصيل الكاملة لا تُعرض على الصفحة العامة، وتبقى متاحة فقط للمسؤولين عبر لوحة المتابعة.",
+      available: "متوفر للعمل",
+      unavailable: "غير متوفر حالياً",
+      availabilityTitle: "حالة توفرك",
+      availabilityDescription: "حدّث حالتك حتى يعرف فريق التشغيل إمكانية تعيينك للطلبات الجديدة.",
+      availabilityError: "تعذّر تحديث حالة التوفر. حاول مرة أخرى."
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -242,6 +266,7 @@ const copy: Record<Language, Copy> = {
       email: "البريد الإلكتروني",
       phone: "رقم الهاتف",
       address: "عنوان الشركة",
+      openMaps: "فتح خرائط Google لتحديد العنوان",
       issueType: "نوع العطل",
       priority: "الأولوية",
       location: "موقع العطل",
@@ -318,7 +343,12 @@ const copy: Record<Language, Copy> = {
       description: "Add an engineer's core details to register them. For privacy, only counts are shown publicly — full details stay inside the private operations dashboard.",
       name: "Engineer name",
       phone: "Phone number",
+      email: "Email",
+      department: "Department",
       specialty: "Specialty",
+      profession: "Profession",
+      experience: "Years of experience",
+      photo: "Engineer photo",
       submit: "Add engineer",
       submitting: "Saving...",
       listTitle: "Team headcount",
@@ -328,7 +358,12 @@ const copy: Record<Language, Copy> = {
       error: "Could not save. Check your connection and try again.",
       countHeadline: "members on the maintenance team",
       countCaption: "Multi-disciplinary engineers and technicians ready to take on reports.",
-      privacyNote: "Full details (names and phones) are not shown on the public page — only administrators see them in the operations dashboard."
+      privacyNote: "Full profile details are not shown publicly. They remain available to administrators in the operations dashboard.",
+      available: "Available for work",
+      unavailable: "Currently unavailable",
+      availabilityTitle: "Your availability",
+      availabilityDescription: "Keep your status current so operations can assign you to new requests.",
+      availabilityError: "Could not update availability. Please try again."
     },
     request: {
       eyebrow: "New request",
@@ -341,6 +376,7 @@ const copy: Record<Language, Copy> = {
       email: "Email",
       phone: "Phone",
       address: "Company address",
+      openMaps: "Open Google Maps to select the address",
       issueType: "Issue type",
       priority: "Priority",
       location: "Issue location",
@@ -927,12 +963,23 @@ export function PublicLanding() {
                   />
                 </Field>
                 <Field label={t.request.address} icon={Building2}>
-                  <input
-                    required
-                    value={requestForm.address}
-                    onChange={(event) => setRequestForm({ ...requestForm, address: event.target.value })}
-                    className="public-input"
-                  />
+                  <div className="grid gap-2">
+                    <input
+                      required
+                      value={requestForm.address}
+                      onChange={(event) => setRequestForm({ ...requestForm, address: event.target.value })}
+                      className="public-input"
+                    />
+                    <a
+                      href={getGoogleMapsSearchUrl(requestForm.address)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="public-action border border-[#bfd2ee] bg-[#f4f8fd] text-[#1567c6] no-underline transition-colors hover:bg-[#e3edfb]"
+                    >
+                      <MapPin className="h-4 w-4" aria-hidden="true" />
+                      {t.request.openMaps}
+                    </a>
+                  </div>
                 </Field>
                 <Field label={t.request.issueType}>
                   <select
@@ -1003,7 +1050,7 @@ export function PublicLanding() {
               <button
                 type="submit"
                 disabled={requestState === "submitting"}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
+                className="public-action mt-6 w-full bg-[#1f86ec] text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {requestState === "submitting" && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
                 {requestState === "submitting" ? t.request.submitting : t.request.submit}
@@ -1065,7 +1112,7 @@ export function PublicLanding() {
                 <button
                   type="submit"
                   disabled={trackLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="public-action bg-[#1f86ec] text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {trackLoading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
                   {trackLoading ? t.track.loading : t.track.submit}
@@ -1108,11 +1155,23 @@ function BrandWordmark() {
   );
 }
 
+const ENGINEER_SESSION_KEY = "engiflow_public_engineer_session";
+
 function EngineersSection({ copy: t, language }: { copy: Copy; language: Language }) {
-  const [count, setCount] = useState<number | null>(null);
+  const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState("");
   const [specialty, setSpecialty] = useState<MaintenanceSpecialty>("ELECTRICITY");
+  const [profession, setProfession] = useState("");
+  const [experienceYears, setExperienceYears] = useState("0");
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarInputKey, setAvatarInputKey] = useState(0);
+  const [managedEngineer, setManagedEngineer] = useState<PublicEngineer | null>(null);
+  const [availabilityToken, setAvailabilityToken] = useState<string | null>(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState(false);
@@ -1126,7 +1185,22 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
     getPublicEngineers()
       .then((data) => {
         if (active) {
-          setCount(data.length);
+          setEngineers(data);
+          const stored = window.localStorage.getItem(ENGINEER_SESSION_KEY);
+          if (stored) {
+            try {
+              const session = JSON.parse(stored) as { id: number; token: string };
+              const engineer = data.find((item) => item.id === session.id);
+              if (engineer) {
+                setManagedEngineer(engineer);
+                setAvailabilityToken(session.token);
+              } else {
+                window.localStorage.removeItem(ENGINEER_SESSION_KEY);
+              }
+            } catch {
+              window.localStorage.removeItem(ENGINEER_SESSION_KEY);
+            }
+          }
         }
       })
       .catch(() => {
@@ -1141,22 +1215,62 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
     event.preventDefault();
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
-    if (!trimmedName || !trimmedPhone) {
+    if (!trimmedName || !trimmedPhone || !email.trim() || !department.trim() || !profession.trim()) {
       return;
     }
     setSubmitting(true);
     setError(null);
     setJustAdded(false);
     try {
-      await createPublicEngineer({ name: trimmedName, phone: trimmedPhone, specialty });
-      setCount((previous) => (previous ?? 0) + 1);
+      const created = await createPublicEngineer({
+        name: trimmedName,
+        phone: trimmedPhone,
+        email: email.trim(),
+        department: department.trim(),
+        specialty,
+        profession: profession.trim(),
+        experience_years: Number(experienceYears),
+        avatar
+      });
+      setEngineers((current) => [created, ...current]);
+      setManagedEngineer(created);
+      setAvailabilityToken(created.availability_token);
+      window.localStorage.setItem(
+        ENGINEER_SESSION_KEY,
+        JSON.stringify({ id: created.id, token: created.availability_token })
+      );
       setName("");
       setPhone("");
+      setEmail("");
+      setDepartment("");
+      setProfession("");
+      setExperienceYears("0");
+      setAvatar(null);
+      setAvatarInputKey((key) => key + 1);
       setJustAdded(true);
     } catch {
       setError(t.engineers.error);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function toggleAvailability() {
+    if (!managedEngineer || !availabilityToken) return;
+    setAvailabilityBusy(true);
+    setAvailabilityError(null);
+    try {
+      const updated = await setPublicEngineerAvailability(
+        managedEngineer.id,
+        availabilityToken,
+        !managedEngineer.is_available
+      );
+      setManagedEngineer(updated);
+      setEngineers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    } catch {
+      setAvailabilityError(t.engineers.availabilityError);
+    } finally {
+      setAvailabilityBusy(false);
     }
   }
 
@@ -1169,12 +1283,12 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
           <p className="mt-4 text-base leading-8 text-[#5b6b85]">{t.engineers.description}</p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           <form
             onSubmit={handleAdd}
             className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7"
           >
-            <div className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.engineers.name} icon={HardHat}>
                 <input
                   required
@@ -1193,6 +1307,24 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
                   className="public-input text-start"
                 />
               </Field>
+              <Field label={t.engineers.email} icon={Mail}>
+                <input
+                  required
+                  type="email"
+                  dir="ltr"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="public-input text-start"
+                />
+              </Field>
+              <Field label={t.engineers.department} icon={Building2}>
+                <input
+                  required
+                  value={department}
+                  onChange={(event) => setDepartment(event.target.value)}
+                  className="public-input"
+                />
+              </Field>
               <Field label={t.engineers.specialty} icon={Wrench}>
                 <select
                   value={specialty}
@@ -1206,6 +1338,34 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
                   ))}
                 </select>
               </Field>
+              <Field label={t.engineers.profession} icon={Wrench}>
+                <input
+                  required
+                  value={profession}
+                  onChange={(event) => setProfession(event.target.value)}
+                  className="public-input"
+                />
+              </Field>
+              <Field label={t.engineers.experience} icon={CalendarClock}>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={experienceYears}
+                  onChange={(event) => setExperienceYears(event.target.value)}
+                  className="public-input"
+                />
+              </Field>
+              <Field label={t.engineers.photo} icon={HardHat}>
+                <input
+                  key={avatarInputKey}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  onChange={(event) => setAvatar(event.target.files?.[0] ?? null)}
+                  className="public-input file:me-3 file:border-0 file:bg-transparent file:font-bold file:text-[#1567c6]"
+                />
+              </Field>
             </div>
 
             {error && (
@@ -1215,7 +1375,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 py-4 font-extrabold text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
+              className="public-action mt-6 w-full bg-[#1f86ec] text-white shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -1227,6 +1387,62 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
           </form>
 
           <div className="grid gap-5">
+            {managedEngineer && (
+              <div className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl">
+                <div className="flex items-center gap-4">
+                  {managedEngineer.avatar ? (
+                    <img
+                      src={managedEngineer.avatar}
+                      alt={managedEngineer.name}
+                      className="h-16 w-16 shrink-0 rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
+                      <HardHat className="h-7 w-7" aria-hidden="true" />
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="m-0 truncate text-lg font-extrabold text-[#15294d]">
+                      {managedEngineer.name}
+                    </h3>
+                    <p className="m-0 mt-1 truncate text-sm text-[#5b6b85]">
+                      {managedEngineer.profession} · {managedEngineer.department}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <h3 className="m-0 text-base font-extrabold text-[#15294d]">
+                    {t.engineers.availabilityTitle}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#5b6b85]">
+                    {t.engineers.availabilityDescription}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={toggleAvailability}
+                    disabled={availabilityBusy}
+                    className={`public-action mt-4 w-full text-white ${
+                      managedEngineer.is_available
+                        ? "bg-[#2c8b4b] hover:bg-[#236e3c]"
+                        : "bg-[#5b6b85] hover:bg-[#46556b]"
+                    }`}
+                  >
+                    {availabilityBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {managedEngineer.is_available ? t.engineers.available : t.engineers.unavailable}
+                  </button>
+                  {availabilityError && (
+                    <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                      {availabilityError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-[2rem] bg-white/72 p-8 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-10">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm font-extrabold uppercase tracking-wider text-[#1567c6]">
@@ -1238,7 +1454,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
               </div>
               <div className="mt-6 flex items-baseline gap-3">
                 <strong className="text-6xl font-extrabold text-[#1567c6] md:text-7xl">
-                  {count === null ? "—" : numberFormat.format(count)}
+                  {numberFormat.format(engineers.length)}
                 </strong>
                 <span className="text-base font-bold text-[#5b6b85] md:text-lg">{t.engineers.countHeadline}</span>
               </div>

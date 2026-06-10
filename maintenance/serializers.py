@@ -523,8 +523,28 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PublicEngineer
-        fields = ["id", "name", "phone", "specialty", "specialty_display", "created_at"]
+        fields = [
+            "id",
+            "name",
+            "phone",
+            "email",
+            "department",
+            "specialty",
+            "specialty_display",
+            "profession",
+            "avatar",
+            "experience_years",
+            "is_available",
+            "created_at",
+        ]
         read_only_fields = ["id", "specialty_display", "created_at"]
+        extra_kwargs = {
+            "email": {"required": True, "allow_blank": False},
+            "department": {"required": True, "allow_blank": False},
+            "profession": {"required": True, "allow_blank": False},
+            "experience_years": {"required": True},
+            "is_available": {"default": True},
+        }
 
     def validate_phone(self, value):
         try:
@@ -538,6 +558,27 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
         if not cleaned:
             raise serializers.ValidationError("Name is required.")
         return cleaned
+
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        queryset = PublicEngineer.objects.filter(email__iexact=normalized)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("An engineer with this email is already registered.")
+        return normalized
+
+    def validate_avatar(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image size must not exceed 5 MB.")
+        return value
+
+
+class PublicEngineerCreateSerializer(PublicEngineerSerializer):
+    availability_token = serializers.UUIDField(read_only=True)
+
+    class Meta(PublicEngineerSerializer.Meta):
+        fields = [*PublicEngineerSerializer.Meta.fields, "availability_token"]
 
 
 class PublicContactInquirySerializer(serializers.ModelSerializer):

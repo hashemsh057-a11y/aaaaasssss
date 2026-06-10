@@ -1,9 +1,12 @@
+import tempfile
 from io import BytesIO
 from datetime import timedelta
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -237,6 +240,12 @@ class DashboardStatisticsTests(MaintenanceAPITestCase):
 
 
 class PublicEndpointTests(MaintenanceAPITestCase):
+    @staticmethod
+    def engineer_avatar():
+        buffer = BytesIO()
+        Image.new("RGB", (32, 32), color="#1f86ec").save(buffer, format="PNG")
+        return SimpleUploadedFile("engineer.png", buffer.getvalue(), content_type="image/png")
+
     def test_public_impact_statistics_do_not_require_authentication(self):
         self.create_request()
 
@@ -294,6 +303,93 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertEqual(maintenance_request.status, MaintenanceRequest.Status.NEW)
         self.assertEqual(maintenance_request.client_company.company_name, "New Facility Co")
         self.assertEqual(maintenance_request.client_company.user.role, User.Role.CLIENT_COMPANY)
+
+    def test_public_engineer_registration_stores_complete_profile_and_avatar(self):
+        payload = {
+            "name": "Mariam Salem",
+            "phone": "+218 91 666 6666",
+            "email": "mariam@example.com",
+            "department": "Facilities",
+            "specialty": MaintenanceSpecialty.HVAC,
+            "profession": "HVAC Engineer",
+            "experience_years": 8,
+            "avatar": self.engineer_avatar(),
+        }
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    reverse("public-engineer-list-create"),
+                    payload,
+                    format="multipart",
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                engineer = PublicEngineer.objects.get(pk=response.data["id"])
+                self.assertEqual(engineer.email, "mariam@example.com")
+                self.assertEqual(engineer.department, "Facilities")
+                self.assertEqual(engineer.profession, "HVAC Engineer")
+                self.assertEqual(engineer.experience_years, 8)
+                self.assertTrue(engineer.avatar.name.endswith(".png"))
+                self.assertTrue(engineer.is_available)
+                self.assertIn("availability_token", response.data)
+
+                list_response = self.client.get(reverse("public-engineer-list-create"))
+                self.assertNotIn("availability_token", list_response.data[0])
+
+    def test_engineer_can_update_availability_only_with_management_token(self):
+        engineer = PublicEngineer.objects.create(
+            name="Ali Omar",
+            phone="+218 91 777 0000",
+            email="ali@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=4,
+        )
+        url = reverse("public-engineer-availability", args=[engineer.id])
+
+        denied = self.client.post(
+            url,
+            {"availability_token": "00000000-0000-0000-0000-000000000000", "is_available": False},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.post(
+            url,
+            {"availability_token": str(engineer.availability_token), "is_available": False},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        engineer.refresh_from_db()
+        self.assertFalse(engineer.is_available)
+
+    def test_unavailable_public_engineer_cannot_be_assigned(self):
+        engineer = PublicEngineer.objects.create(
+            name="Unavailable Engineer",
+            phone="+218 91 700 0000",
+            email="unavailable@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=5,
+            is_available=False,
+        )
+        maintenance_request = self.create_request(status=MaintenanceRequest.Status.UNDER_REVIEW)
+
+        response = self.client.post(
+            reverse("public-admin-request-transition", args=[maintenance_request.id]),
+            {
+                "status": MaintenanceRequest.Status.ASSIGNED,
+                "assigned_public_engineer_id": engineer.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        maintenance_request.refresh_from_db()
+        self.assertIsNone(maintenance_request.assigned_public_engineer)
 
 
 class PublicReportTests(MaintenanceAPITestCase):

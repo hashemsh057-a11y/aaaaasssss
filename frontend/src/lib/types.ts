@@ -155,15 +155,30 @@ export type PublicEngineer = {
   id: number;
   name: string;
   phone: string;
+  email: string;
+  department: string;
   specialty: MaintenanceSpecialty;
   specialty_display: string;
+  profession: string;
+  avatar: string | null;
+  experience_years: number;
+  is_available: boolean;
   created_at: string;
 };
 
 export type PublicEngineerPayload = {
   name: string;
   phone: string;
+  email: string;
+  department: string;
   specialty: MaintenanceSpecialty;
+  profession: string;
+  experience_years: number;
+  avatar?: File | null;
+};
+
+export type PublicEngineerRegistration = PublicEngineer & {
+  availability_token: string;
 };
 
 export type PublicCompany = {

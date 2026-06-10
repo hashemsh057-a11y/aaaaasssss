@@ -86,10 +86,19 @@ class RequestEvidenceAdmin(admin.ModelAdmin):
 
 @admin.register(PublicEngineer)
 class PublicEngineerAdmin(admin.ModelAdmin):
-    list_display = ("name", "phone", "specialty", "created_at")
-    list_filter = ("specialty", "created_at")
-    search_fields = ("name", "phone")
-    readonly_fields = ("created_at",)
+    list_display = (
+        "name",
+        "email",
+        "department",
+        "profession",
+        "specialty",
+        "experience_years",
+        "is_available",
+        "created_at",
+    )
+    list_filter = ("specialty", "is_available", "department", "created_at")
+    search_fields = ("name", "email", "phone", "department", "profession")
+    readonly_fields = ("availability_token", "created_at")
 
 
 @admin.register(PublicContactInquiry)

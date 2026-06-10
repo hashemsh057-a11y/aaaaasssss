@@ -268,6 +268,29 @@ textarea {
   outline: 0;
 }
 
+.public-action {
+  min-block-size: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.public-action-icon {
+  inline-size: 48px;
+  block-size: 48px;
+  min-block-size: 48px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 12px;
+}
+
 .primary-action,
 .icon-text-button,
 .action-cluster button,
