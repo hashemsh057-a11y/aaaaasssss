@@ -181,6 +181,12 @@ export type PublicEngineerRegistration = PublicEngineer & {
   availability_token: string;
 };
 
+export type PublicCapabilities = {
+  engineer_profile_version: number;
+  engineer_avatar_webp: boolean;
+  engineer_availability: boolean;
+};
+
 export type PublicCompany = {
   id: number;
   company_name: string;

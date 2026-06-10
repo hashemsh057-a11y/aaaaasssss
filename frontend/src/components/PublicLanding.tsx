@@ -30,6 +30,7 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  BackendUpgradeRequiredError,
   createPublicEngineer,
   getPublicEngineers,
   getPublicImpactStatistics,
@@ -38,6 +39,11 @@ import {
   trackPublicRequest
 } from "@/src/lib/api";
 import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
+import {
+  clearEngineerManagementSession,
+  loadEngineerManagementSession,
+  saveEngineerManagementSession
+} from "@/src/lib/engineerSession";
 import type {
   Language,
   MaintenanceSpecialty,
@@ -48,6 +54,7 @@ import type {
   PublicMaintenanceRequestPayload,
   PublicTrackedRequest
 } from "@/src/lib/types";
+import { EngineerAvatar } from "./EngineerAvatar";
 
 type RequestFormState = Omit<PublicMaintenanceRequestPayload, "preferred_date"> & {
   preferred_date: string;
@@ -126,6 +133,10 @@ type Copy = {
     availabilityTitle: string;
     availabilityDescription: string;
     availabilityError: string;
+    markAvailable: string;
+    markUnavailable: string;
+    currentAvailability: string;
+    backendUpgradeError: string;
   };
   request: {
     eyebrow: string;
@@ -253,7 +264,11 @@ const copy: Record<Language, Copy> = {
       unavailable: "غير متوفر حالياً",
       availabilityTitle: "حالة توفرك",
       availabilityDescription: "حدّث حالتك حتى يعرف فريق التشغيل إمكانية تعيينك للطلبات الجديدة.",
-      availabilityError: "تعذّر تحديث حالة التوفر. حاول مرة أخرى."
+      availabilityError: "تعذّر تحديث حالة التوفر. حاول مرة أخرى.",
+      markAvailable: "تغيير الحالة إلى متوفر",
+      markUnavailable: "تغيير الحالة إلى غير متوفر",
+      currentAvailability: "الحالة الحالية",
+      backendUpgradeError: "الخادم لم يُحدّث بعد لدعم الصورة وحالة التوفر. حدّث PythonAnywhere ثم أعد التسجيل."
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -363,7 +378,11 @@ const copy: Record<Language, Copy> = {
       unavailable: "Currently unavailable",
       availabilityTitle: "Your availability",
       availabilityDescription: "Keep your status current so operations can assign you to new requests.",
-      availabilityError: "Could not update availability. Please try again."
+      availabilityError: "Could not update availability. Please try again.",
+      markAvailable: "Set status to available",
+      markUnavailable: "Set status to unavailable",
+      currentAvailability: "Current status",
+      backendUpgradeError: "The server has not been updated for photos and availability yet. Update PythonAnywhere, then register again."
     },
     request: {
       eyebrow: "New request",
@@ -1155,8 +1174,6 @@ function BrandWordmark() {
   );
 }
 
-const ENGINEER_SESSION_KEY = "engiflow_public_engineer_session";
-
 function EngineersSection({ copy: t, language }: { copy: Copy; language: Language }) {
   const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
   const [name, setName] = useState("");
@@ -1186,19 +1203,14 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
       .then((data) => {
         if (active) {
           setEngineers(data);
-          const stored = window.localStorage.getItem(ENGINEER_SESSION_KEY);
-          if (stored) {
-            try {
-              const session = JSON.parse(stored) as { id: number; token: string };
-              const engineer = data.find((item) => item.id === session.id);
-              if (engineer) {
-                setManagedEngineer(engineer);
-                setAvailabilityToken(session.token);
-              } else {
-                window.localStorage.removeItem(ENGINEER_SESSION_KEY);
-              }
-            } catch {
-              window.localStorage.removeItem(ENGINEER_SESSION_KEY);
+          const session = loadEngineerManagementSession();
+          if (session) {
+            const engineer = data.find((item) => item.id === session.id);
+            if (engineer) {
+              setManagedEngineer(engineer);
+              setAvailabilityToken(session.token);
+            } else {
+              clearEngineerManagementSession();
             }
           }
         }
@@ -1235,10 +1247,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
       setEngineers((current) => [created, ...current]);
       setManagedEngineer(created);
       setAvailabilityToken(created.availability_token);
-      window.localStorage.setItem(
-        ENGINEER_SESSION_KEY,
-        JSON.stringify({ id: created.id, token: created.availability_token })
-      );
+      saveEngineerManagementSession({ id: created.id, token: created.availability_token });
       setName("");
       setPhone("");
       setEmail("");
@@ -1248,8 +1257,12 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
       setAvatar(null);
       setAvatarInputKey((key) => key + 1);
       setJustAdded(true);
-    } catch {
-      setError(t.engineers.error);
+    } catch (caught) {
+      setError(
+        caught instanceof BackendUpgradeRequiredError
+          ? t.engineers.backendUpgradeError
+          : t.engineers.error
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1390,17 +1403,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             {managedEngineer && (
               <div className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl">
                 <div className="flex items-center gap-4">
-                  {managedEngineer.avatar ? (
-                    <img
-                      src={managedEngineer.avatar}
-                      alt={managedEngineer.name}
-                      className="h-16 w-16 shrink-0 rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-                      <HardHat className="h-7 w-7" aria-hidden="true" />
-                    </span>
-                  )}
+                  <EngineerAvatar src={managedEngineer.avatar} alt={managedEngineer.name} />
                   <div className="min-w-0">
                     <h3 className="m-0 truncate text-lg font-extrabold text-[#15294d]">
                       {managedEngineer.name}
@@ -1417,22 +1420,40 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
                   <p className="mt-2 text-sm leading-6 text-[#5b6b85]">
                     {t.engineers.availabilityDescription}
                   </p>
+                  <div
+                    className={`mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-extrabold ${
+                      managedEngineer.is_available
+                        ? "bg-[#e3f3e7] text-[#236e3c]"
+                        : "bg-[#eef3f1] text-[#46556b]"
+                    }`}
+                  >
+                    <span>{t.engineers.currentAvailability}</span>
+                    <span>
+                      {managedEngineer.is_available
+                        ? t.engineers.available
+                        : t.engineers.unavailable}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={toggleAvailability}
                     disabled={availabilityBusy}
                     className={`public-action mt-4 w-full text-white ${
                       managedEngineer.is_available
-                        ? "bg-[#2c8b4b] hover:bg-[#236e3c]"
-                        : "bg-[#5b6b85] hover:bg-[#46556b]"
+                        ? "bg-[#5b6b85] hover:bg-[#46556b]"
+                        : "bg-[#2c8b4b] hover:bg-[#236e3c]"
                     }`}
                   >
                     {availabilityBusy ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : managedEngineer.is_available ? (
+                      <X className="h-4 w-4" aria-hidden="true" />
                     ) : (
                       <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                     )}
-                    {managedEngineer.is_available ? t.engineers.available : t.engineers.unavailable}
+                    {managedEngineer.is_available
+                      ? t.engineers.markUnavailable
+                      : t.engineers.markAvailable}
                   </button>
                   {availabilityError && (
                     <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">

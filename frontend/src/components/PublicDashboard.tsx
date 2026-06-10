@@ -30,6 +30,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
+  BackendUpgradeRequiredError,
   adminTransitionRequest,
   createPublicEngineer,
   getReportUrl,
@@ -41,6 +42,7 @@ import {
 } from "@/src/lib/api";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
 import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
+import { saveEngineerManagementSession } from "@/src/lib/engineerSession";
 import { DashboardLogin, useDashboardSession } from "./DashboardLogin";
 import type {
   Language,
@@ -52,6 +54,7 @@ import type {
   PublicTrackedRequest,
   ReportKind
 } from "@/src/lib/types";
+import { EngineerAvatar } from "./EngineerAvatar";
 
 type FetchState = "idle" | "loading" | "ready" | "error";
 
@@ -372,17 +375,7 @@ export function PublicDashboard() {
                   className="rounded-3xl bg-[#f4f8fd] p-5 transition-colors hover:bg-[#e3edfb]"
                 >
                   <div className="flex items-start gap-3">
-                    {engineer.avatar ? (
-                      <img
-                        src={engineer.avatar}
-                        alt={engineer.name}
-                        className="h-16 w-16 shrink-0 rounded-2xl object-cover shadow-sm"
-                      />
-                    ) : (
-                      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
-                        <HardHat className="h-7 w-7" aria-hidden="true" />
-                      </span>
-                    )}
+                    <EngineerAvatar src={engineer.avatar} alt={engineer.name} />
                     <div className="min-w-0 flex-1">
                       <strong className="block truncate text-base text-[#15294d]">{engineer.name}</strong>
                       <span className="block truncate text-sm text-[#5b6b85]">
@@ -681,6 +674,7 @@ function AddEngineerCard({
         experience_years: Number(experienceYears),
         avatar
       });
+      saveEngineerManagementSession({ id: created.id, token: created.availability_token });
       onAdded(created);
       setName("");
       setPhone("");
@@ -691,8 +685,14 @@ function AddEngineerCard({
       setAvatar(null);
       setAvatarInputKey((key) => key + 1);
       setSuccess(true);
-    } catch {
-      setError(t.engineerAddError);
+    } catch (caught) {
+      setError(
+        caught instanceof BackendUpgradeRequiredError
+          ? language === "ar"
+            ? "الخادم لم يُحدّث بعد لدعم صورة المهندس وحالة التوفر."
+            : "The backend has not been updated for engineer photos and availability."
+          : t.engineerAddError
+      );
     } finally {
       setSubmitting(false);
     }

@@ -255,6 +255,14 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertIn("total_open_requests", response.data)
         self.assertIn("completion_rate", response.data)
 
+    def test_public_capabilities_advertise_engineer_profile_support(self):
+        response = self.client.get(reverse("public-capabilities"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["engineer_profile_version"], 2)
+        self.assertTrue(response.data["engineer_avatar_webp"])
+        self.assertTrue(response.data["engineer_availability"])
+
     def test_public_tracking_returns_limited_ticket_data(self):
         maintenance_request = self.create_request()
 
@@ -330,7 +338,9 @@ class PublicEndpointTests(MaintenanceAPITestCase):
                 self.assertEqual(engineer.department, "Facilities")
                 self.assertEqual(engineer.profession, "HVAC Engineer")
                 self.assertEqual(engineer.experience_years, 8)
-                self.assertTrue(engineer.avatar.name.endswith(".png"))
+                self.assertTrue(engineer.avatar.name.endswith(".webp"))
+                with Image.open(engineer.avatar.path) as saved_avatar:
+                    self.assertEqual(saved_avatar.format, "WEBP")
                 self.assertTrue(engineer.is_available)
                 self.assertIn("availability_token", response.data)
 

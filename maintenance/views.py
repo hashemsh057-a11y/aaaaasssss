@@ -214,6 +214,19 @@ class PublicEngineerListCreateAPIView(generics.ListCreateAPIView):
         return PublicEngineerSerializer
 
 
+class PublicCapabilitiesAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {
+                "engineer_profile_version": 2,
+                "engineer_avatar_webp": True,
+                "engineer_availability": True,
+            }
+        )
+
+
 class PublicEngineerDeleteAPIView(generics.DestroyAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicEngineerSerializer

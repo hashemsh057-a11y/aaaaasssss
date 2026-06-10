@@ -1,10 +1,14 @@
 import re
+from io import BytesIO
+from uuid import uuid4
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
+from PIL import Image, ImageOps, UnidentifiedImageError
 from rest_framework import serializers
 
 from .models import (
@@ -572,6 +576,38 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Image size must not exceed 5 MB.")
         return value
+
+    @staticmethod
+    def _avatar_as_webp(uploaded_file):
+        try:
+            uploaded_file.seek(0)
+            with Image.open(uploaded_file) as source:
+                image = ImageOps.exif_transpose(source)
+                image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                has_alpha = image.mode in {"RGBA", "LA"} or (
+                    image.mode == "P" and "transparency" in image.info
+                )
+                image = image.convert("RGBA" if has_alpha else "RGB")
+                output = BytesIO()
+                image.save(output, format="WEBP", quality=84, method=6)
+        except (OSError, UnidentifiedImageError, ValueError) as exc:
+            raise serializers.ValidationError(
+                {"avatar": "Upload a valid JPG, PNG, or WebP image."}
+            ) from exc
+
+        return ContentFile(output.getvalue(), name=f"{uuid4().hex}.webp")
+
+    def create(self, validated_data):
+        avatar = validated_data.get("avatar")
+        if avatar:
+            validated_data["avatar"] = self._avatar_as_webp(avatar)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.get("avatar")
+        if avatar:
+            validated_data["avatar"] = self._avatar_as_webp(avatar)
+        return super().update(instance, validated_data)
 
 
 class PublicEngineerCreateSerializer(PublicEngineerSerializer):

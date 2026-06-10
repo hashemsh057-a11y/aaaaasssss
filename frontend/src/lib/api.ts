@@ -6,6 +6,7 @@ import type {
   MaintenanceRequest,
   MaintenanceStatus,
   PublicCompany,
+  PublicCapabilities,
   PublicContactPayload,
   PublicEngineer,
   PublicEngineerPayload,
@@ -43,6 +44,20 @@ const rawApiBaseUrl = sanitizeApiBaseUrl(
 const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "maintenance_access_token";
 const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
+
+export class BackendUpgradeRequiredError extends Error {
+  constructor() {
+    super("The backend does not support the current engineer profile API.");
+    this.name = "BackendUpgradeRequiredError";
+  }
+}
+
+export function getApiAssetUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^(https?:|blob:|data:)/i.test(value)) return value;
+  const apiUrl = new URL(API_BASE_URL);
+  return new URL(value, apiUrl.origin).toString();
+}
 
 /**
  * Ensures every Django endpoint URL ends with a trailing slash.
@@ -224,7 +239,21 @@ export function getPublicEngineers() {
   return apiFetch<PublicEngineer[]>("/public/engineers/");
 }
 
-export function createPublicEngineer(payload: PublicEngineerPayload) {
+export async function createPublicEngineer(payload: PublicEngineerPayload) {
+  let capabilities: PublicCapabilities;
+  try {
+    capabilities = await apiFetch<PublicCapabilities>("/public/capabilities/");
+  } catch {
+    throw new BackendUpgradeRequiredError();
+  }
+  if (
+    capabilities.engineer_profile_version < 2 ||
+    !capabilities.engineer_avatar_webp ||
+    !capabilities.engineer_availability
+  ) {
+    throw new BackendUpgradeRequiredError();
+  }
+
   const formData = new FormData();
   formData.append("name", payload.name);
   formData.append("phone", payload.phone);
@@ -237,10 +266,18 @@ export function createPublicEngineer(payload: PublicEngineerPayload) {
   if (payload.avatar) {
     formData.append("avatar", payload.avatar);
   }
-  return apiFetch<PublicEngineerRegistration>("/public/engineers/", {
+  const created = await apiFetch<PublicEngineerRegistration>("/public/engineers/", {
     method: "POST",
     body: formData
   });
+  if (
+    !created.availability_token ||
+    typeof created.is_available !== "boolean" ||
+    !Object.prototype.hasOwnProperty.call(created, "avatar")
+  ) {
+    throw new BackendUpgradeRequiredError();
+  }
+  return created;
 }
 
 export function setPublicEngineerAvailability(
