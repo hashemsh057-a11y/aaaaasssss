@@ -1,8 +1,12 @@
+import json
 import tempfile
 from io import BytesIO
 from datetime import timedelta
+from unittest.mock import MagicMock, patch
 
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
@@ -11,6 +15,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import (
+    AssignmentNotification,
     CompanyProfile,
     EngineerProfile,
     MaintenanceRequest,
@@ -500,6 +505,102 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         maintenance_request.refresh_from_db()
         self.assertIsNone(maintenance_request.assigned_public_engineer)
+
+    @override_settings(
+        ASSIGNMENT_EMAIL_PROVIDER="smtp",
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        DEFAULT_FROM_EMAIL="EngiFlow <notifications@example.com>",
+    )
+    def test_assigning_public_engineer_sends_and_logs_email(self):
+        mail.outbox.clear()
+        engineer = PublicEngineer.objects.create(
+            name="Assigned Engineer",
+            phone="+218 91 711 0000",
+            email="assigned@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=8,
+        )
+        maintenance_request = self.create_request(status=MaintenanceRequest.Status.UNDER_REVIEW)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("public-admin-request-transition", args=[maintenance_request.id]),
+                {
+                    "status": MaintenanceRequest.Status.ASSIGNED,
+                    "assigned_public_engineer_id": engineer.id,
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        notification = AssignmentNotification.objects.get(request=maintenance_request)
+        self.assertEqual(notification.status, AssignmentNotification.Status.SENT)
+        self.assertEqual(notification.provider, AssignmentNotification.Provider.SMTP)
+        self.assertEqual(notification.recipient_email, "assigned@example.com")
+        self.assertEqual(notification.attempts, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(str(maintenance_request.id), mail.outbox[0].subject)
+        self.assertIn(maintenance_request.client_company.company_name, mail.outbox[0].body)
+
+    @override_settings(
+        ASSIGNMENT_EMAIL_PROVIDER="cloudflare",
+        CLOUDFLARE_EMAIL_ACCOUNT_ID="account-id",
+        CLOUDFLARE_EMAIL_API_TOKEN="api-token",
+        CLOUDFLARE_EMAIL_FROM_ADDRESS="notifications@example.com",
+        CLOUDFLARE_EMAIL_FROM_NAME="EngiFlow",
+        CLOUDFLARE_EMAIL_REPLY_TO="support@example.com",
+    )
+    def test_cloudflare_assignment_email_uses_rest_api_payload(self):
+        engineer = PublicEngineer.objects.create(
+            name="Cloudflare Engineer",
+            phone="+218 91 722 0000",
+            email="cloudflare-engineer@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=6,
+        )
+        maintenance_request = self.create_request(status=MaintenanceRequest.Status.UNDER_REVIEW)
+        cloudflare_response = MagicMock()
+        cloudflare_response.__enter__.return_value.read.return_value = json.dumps(
+            {
+                "success": True,
+                "errors": [],
+                "messages": [],
+                "result": {
+                    "delivered": ["cloudflare-engineer@example.com"],
+                    "permanent_bounces": [],
+                    "queued": [],
+                },
+            }
+        ).encode("utf-8")
+
+        with patch("maintenance.notifications.urlopen", return_value=cloudflare_response) as mocked_urlopen:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(
+                    reverse("public-admin-request-transition", args=[maintenance_request.id]),
+                    {
+                        "status": MaintenanceRequest.Status.ASSIGNED,
+                        "assigned_public_engineer_id": engineer.id,
+                    },
+                    format="json",
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        notification = AssignmentNotification.objects.get(request=maintenance_request)
+        self.assertEqual(notification.status, AssignmentNotification.Status.SENT)
+        outgoing_request = mocked_urlopen.call_args.args[0]
+        payload = json.loads(outgoing_request.data.decode("utf-8"))
+        self.assertEqual(payload["to"], "cloudflare-engineer@example.com")
+        self.assertEqual(
+            payload["from"],
+            {"address": "notifications@example.com", "name": "EngiFlow"},
+        )
+        self.assertEqual(payload["reply_to"], "support@example.com")
+        self.assertIn("text", payload)
+        self.assertIn("html", payload)
 
 
 class PublicReportTests(MaintenanceAPITestCase):

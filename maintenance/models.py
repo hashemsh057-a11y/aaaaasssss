@@ -462,3 +462,56 @@ class PublicContactInquiry(models.Model):
 
     def __str__(self):
         return f"{self.company_name} - {self.contact_name}"
+
+
+class AssignmentNotification(models.Model):
+    class Provider(models.TextChoices):
+        CLOUDFLARE = "CLOUDFLARE", "Cloudflare Email"
+        SMTP = "SMTP", "SMTP"
+        DISABLED = "DISABLED", "Disabled"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SENT = "SENT", "Sent"
+        FAILED = "FAILED", "Failed"
+        SKIPPED = "SKIPPED", "Skipped"
+
+    request = models.ForeignKey(
+        MaintenanceRequest,
+        on_delete=models.CASCADE,
+        related_name="assignment_notifications",
+    )
+    public_engineer = models.ForeignKey(
+        PublicEngineer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignment_notifications",
+    )
+    engineer_profile = models.ForeignKey(
+        EngineerProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignment_notifications",
+    )
+    recipient_email = models.EmailField(blank=True)
+    subject = models.CharField(max_length=240)
+    provider = models.CharField(max_length=16, choices=Provider.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    provider_response = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["request", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Request #{self.request_id} - {self.recipient_email or 'no email'} - {self.status}"

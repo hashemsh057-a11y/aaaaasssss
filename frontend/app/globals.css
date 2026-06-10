@@ -249,12 +249,12 @@ textarea {
 
 .public-input {
   inline-size: 100%;
-  min-block-size: 48px;
-  border: 1px solid #c3d4ec;
-  border-radius: 16px;
-  background: rgba(251, 253, 249, 0.9);
-  color: #15294d;
-  padding: 12px 14px;
+  min-block-size: 44px;
+  border: 1px solid #cfd7e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17233a;
+  padding: 10px 12px;
   transition:
     border-color 220ms ease,
     box-shadow 220ms ease,
@@ -262,20 +262,20 @@ textarea {
 }
 
 .public-input:focus {
-  border-color: #1f86ec;
+  border-color: #2a75bd;
   background: white;
-  box-shadow: 0 0 0 4px rgba(191, 236, 239, 0.48);
+  box-shadow: 0 0 0 3px rgba(42, 117, 189, 0.16);
   outline: 0;
 }
 
 .public-action {
-  min-block-size: 48px;
+  min-block-size: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 20px;
-  border-radius: 12px;
+  padding: 0 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 800;
   line-height: 1.2;

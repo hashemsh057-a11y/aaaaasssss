@@ -31,6 +31,29 @@ ALLOWED_HOSTS = [
 ]
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:3000/" if DEBUG else "/admin/")
 
+# Assignment email notifications. "auto" uses Cloudflare when all Cloudflare
+# credentials exist, otherwise SMTP when EMAIL_HOST exists, and stays disabled
+# when neither provider is configured.
+ASSIGNMENT_EMAIL_PROVIDER = os.getenv("ASSIGNMENT_EMAIL_PROVIDER", "auto").strip().lower()
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "EngiFlow <notifications@localhost>")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "12"))
+
+CLOUDFLARE_EMAIL_ACCOUNT_ID = os.getenv("CLOUDFLARE_EMAIL_ACCOUNT_ID", "")
+CLOUDFLARE_EMAIL_API_TOKEN = os.getenv("CLOUDFLARE_EMAIL_API_TOKEN", "")
+CLOUDFLARE_EMAIL_FROM_ADDRESS = os.getenv("CLOUDFLARE_EMAIL_FROM_ADDRESS", "")
+CLOUDFLARE_EMAIL_FROM_NAME = os.getenv("CLOUDFLARE_EMAIL_FROM_NAME", "EngiFlow")
+CLOUDFLARE_EMAIL_REPLY_TO = os.getenv("CLOUDFLARE_EMAIL_REPLY_TO", "")
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',

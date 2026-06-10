@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, serializers as drf_serializers, status, viewsets
@@ -13,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import CompanyProfile, EngineerProfile, MaintenanceRequest, PublicEngineer, User
+from .notifications import queue_assignment_notification
 from .permissions import (
     CompanyProfilePermission,
     EngineerProfilePermission,
@@ -302,6 +304,8 @@ class PublicAdminRequestTransitionAPIView(APIView):
 
     def post(self, request, request_id):
         maintenance_request = get_object_or_404(MaintenanceRequest, pk=request_id)
+        previous_status = maintenance_request.status
+        previous_public_engineer_id = maintenance_request.assigned_public_engineer_id
         target_status = request.data.get("status")
         if not target_status:
             raise drf_serializers.ValidationError({"status": "Required."})
@@ -364,7 +368,17 @@ class PublicAdminRequestTransitionAPIView(APIView):
             raise drf_serializers.ValidationError(
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             )
-        maintenance_request.save()
+        with transaction.atomic():
+            maintenance_request.save()
+            assignment_changed = (
+                target_status == MaintenanceRequest.Status.ASSIGNED
+                and (
+                    previous_status != MaintenanceRequest.Status.ASSIGNED
+                    or previous_public_engineer_id != maintenance_request.assigned_public_engineer_id
+                )
+            )
+            if assignment_changed:
+                queue_assignment_notification(maintenance_request)
 
         from .serializers import PublicMaintenanceRequestTrackingSerializer
 

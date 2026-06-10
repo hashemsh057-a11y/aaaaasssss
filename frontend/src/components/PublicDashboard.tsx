@@ -11,6 +11,7 @@ import {
   HardHat,
   FileSpreadsheet,
   FileText,
+  LayoutDashboard,
   Loader2,
   LogOut,
   Mail,
@@ -66,6 +67,7 @@ import { EngineerAvatar } from "./EngineerAvatar";
 import { ImageLightbox } from "./ImageLightbox";
 
 type FetchState = "idle" | "loading" | "ready" | "error";
+type DashboardView = "overview" | "requests" | "engineers" | "companies" | "reports";
 
 const SPECIALTY_OPTIONS: MaintenanceSpecialty[] = [
   "ELECTRICITY",
@@ -117,6 +119,7 @@ function stageTimestamp(request: PublicTrackedRequest, stage: MaintenanceStatus)
 
 export function PublicDashboard() {
   const [language, setLanguage] = useState<Language>("ar");
+  const [activeView, setActiveView] = useState<DashboardView>("overview");
   const session = useDashboardSession();
   const [stats, setStats] = useState<PublicImpactStatistics | null>(null);
   const [engineers, setEngineers] = useState<PublicEngineer[]>([]);
@@ -262,13 +265,55 @@ export function PublicDashboard() {
       tint: "coral" as const
     }
   ];
+  const navigation: Array<{
+    id: DashboardView;
+    label: string;
+    description: string;
+    icon: typeof LayoutDashboard;
+    count?: number;
+  }> = [
+    {
+      id: "overview",
+      label: t.overview,
+      description: t.overviewDescription,
+      icon: LayoutDashboard
+    },
+    {
+      id: "requests",
+      label: t.requests,
+      description: t.requestsDescription,
+      icon: ClipboardList,
+      count: requests.length
+    },
+    {
+      id: "engineers",
+      label: t.engineers,
+      description: t.engineersDescription,
+      icon: HardHat,
+      count: engineers.length
+    },
+    {
+      id: "companies",
+      label: t.companies,
+      description: t.companiesDescription,
+      icon: Building2,
+      count: companies.length
+    },
+    {
+      id: "reports",
+      label: t.reports,
+      description: t.reportsDescription,
+      icon: FileText
+    }
+  ];
+  const activeNavigation = navigation.find((item) => item.id === activeView) ?? navigation[0];
 
   // Gate: show login until the operator authenticates (client-side check).
   if (session.authenticated === null || state === "loading") {
     return (
       <main
         dir={dir}
-        className="grid min-h-screen place-items-center bg-[linear-gradient(135deg,#eef4fc_0%,#dde9f9_55%,#f0f5fc_100%)] px-4"
+        className="grid min-h-screen place-items-center bg-[#f4f6f8] px-4"
       >
         <div className="flex flex-col items-center gap-4 text-[#1567c6]">
           <Loader2 className="h-10 w-10 animate-spin" aria-hidden="true" />
@@ -291,57 +336,139 @@ export function PublicDashboard() {
   return (
     <div
       dir={dir}
-      className="min-h-screen bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] pb-16 text-[#15294d]"
+      className="min-h-screen bg-[#f4f6f8] text-[#17233a] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]"
     >
-      <header className="sticky top-0 z-40 border-b border-white/70 bg-[#fbfdff]/85 backdrop-blur-xl">
-        <div className="container mx-auto flex min-h-[72px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <span dir="ltr" className="flex items-center gap-3">
-            <img
-              src="/engiflow-logo.png"
-              alt="EngiFlow"
-              width={56}
-              height={56}
-              className="h-14 w-14 object-contain"
-            />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7088a0]">
-              {t.console}
-            </span>
+      <aside className="hidden h-screen flex-col border-e border-[#dfe4ea] bg-white lg:sticky lg:top-0 lg:flex">
+        <div dir="ltr" className="flex h-[76px] items-center gap-3 border-b border-[#e8ecf1] px-5">
+          <img
+            src="/engiflow-logo.png"
+            alt="EngiFlow"
+            width={44}
+            height={44}
+            className="h-11 w-11 object-contain"
+          />
+          <span className="min-w-0">
+            <strong className="block truncate text-base font-bold text-[#17233a]">EngiFlow</strong>
+            <span className="block truncate text-xs font-medium text-[#718096]">{t.console}</span>
           </span>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto p-3" aria-label={t.dashboardNavigation}>
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const active = item.id === activeView;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveView(item.id)}
+                className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-[#eaf2fb] text-[#1769aa]"
+                    : "bg-transparent text-[#536174] hover:bg-[#f2f5f8] hover:text-[#17233a]"
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-start">{item.label}</span>
+                {item.count !== undefined && (
+                  <span
+                    className={`min-w-6 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold ${
+                      active ? "bg-white text-[#1769aa]" : "bg-[#eef1f4] text-[#718096]"
+                    }`}
+                  >
+                    {numberFormat.format(item.count)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-[#e8ecf1] p-4">
+          <div className="flex items-center gap-2 text-xs font-medium text-[#536174]">
+            <span className="h-2 w-2 rounded-full bg-[#2f9b61]" aria-hidden="true" />
+            {t.liveData}
+          </div>
+        </div>
+      </aside>
+
+      <div className="min-w-0">
+        <header className="sticky top-0 z-40 border-b border-[#dfe4ea] bg-white/95 backdrop-blur-md">
+          <div className="flex min-h-[76px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+            <div className="min-w-0">
+              <h1 className="m-0 truncate text-lg font-bold text-[#17233a] sm:text-xl">
+                {activeNavigation.label}
+              </h1>
+              <p className="m-0 mt-1 hidden truncate text-sm text-[#718096] sm:block">
+                {activeNavigation.description}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <img
+                src="/engiflow-logo.png"
+                alt="EngiFlow"
+                width={38}
+                height={38}
+                className="me-1 h-9 w-9 object-contain lg:hidden"
+              />
             <button
               type="button"
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/85 px-4 text-sm font-bold text-[#5b6b85] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#e3edfb]"
+              title={t.language}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#dfe4ea] bg-white px-3 text-sm font-semibold text-[#536174] transition-colors hover:bg-[#f3f6f9]"
             >
-              <Globe2 className="h-4 w-4" aria-hidden="true" />
-              {language === "ar" ? "English" : "العربية"}
+              <Globe2 className="h-[18px] w-[18px]" aria-hidden="true" />
+              <span className="hidden sm:inline">{language === "ar" ? "English" : "العربية"}</span>
             </button>
             <button
               type="button"
               onClick={refresh}
               disabled={refreshing}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1f86ec] px-5 text-sm font-extrabold text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
+              title={t.refresh}
+              aria-label={t.refresh}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#1769aa] text-white transition-colors hover:bg-[#12598f] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
-              {t.refresh}
+              <RefreshCw className={`h-[18px] w-[18px] ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={session.signOut}
-              title={language === "ar" ? "خروج" : "Sign out"}
-              aria-label={language === "ar" ? "خروج" : "Sign out"}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/85 text-[#d9534f] shadow-sm transition-all hover:-translate-y-0.5 hover:bg-red-50"
+              title={t.signOut}
+              aria-label={t.signOut}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#ead8d5] bg-white text-[#b84d3f] transition-colors hover:bg-[#fff4f2]"
             >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
+              <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
             </button>
           </div>
         </div>
-      </header>
+          <nav
+            className="flex gap-1 overflow-x-auto border-t border-[#edf0f3] px-3 py-2 lg:hidden"
+            aria-label={t.dashboardNavigation}
+          >
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              const active = item.id === activeView;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveView(item.id)}
+                  className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold ${
+                    active ? "bg-[#eaf2fb] text-[#1769aa]" : "bg-transparent text-[#66758a]"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </header>
 
-      <main className="container mx-auto grid gap-8 px-4 py-8 sm:px-6 lg:py-12">
+        <main className="mx-auto grid w-full max-w-[1480px] gap-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         {errors.length > 0 && (
-          <div className="flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <span>
               {t.dataLoadError} ({errors.join(", ")})
@@ -349,42 +476,42 @@ export function PublicDashboard() {
           </div>
         )}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label={t.dashboard}>
-          {headlineMetrics.map((metric) => (
-            <MetricCard
-              key={metric.label}
-              icon={metric.icon}
-              label={metric.label}
-              value={metric.value}
-              tint={metric.tint}
-            />
-          ))}
-        </section>
+        {activeView === "overview" && (
+          <>
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t.dashboard}>
+              {headlineMetrics.map((metric) => (
+                <MetricCard
+                  key={metric.label}
+                  icon={metric.icon}
+                  label={metric.label}
+                  value={metric.value}
+                  tint={metric.tint}
+                />
+              ))}
+            </section>
 
-        <ReportsPanel t={t} companies={companies} />
-
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-              <BarChart3 className="h-6 w-6" aria-hidden="true" />
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+              <BarChart3 className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.recurringIssues}</h2>
+            <h2 className="m-0 text-base font-bold text-[#17233a]">{t.recurringIssues}</h2>
           </div>
           {recurring.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
+            <p className="m-0 rounded-lg border border-dashed border-[#cfd7e1] bg-[#f8fafb] p-6 text-center text-sm text-[#66758a]">
               {t.noRequests}
             </p>
           ) : (
             <div className="grid gap-4">
               {recurring.map((issue) => (
-                <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdff] p-4">
-                  <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#1c3263]">
+                <div key={issue.issue_type} className="rounded-lg border border-[#edf0f3] bg-[#fbfcfd] p-4">
+                  <div className="mb-3 flex items-center justify-between text-sm font-semibold text-[#344257]">
                     <span>{getSpecialtyLabel(issue.issue_type, language)}</span>
-                    <span className="text-[#7088a0]">{numberFormat.format(issue.total)}</span>
+                    <span className="text-[#718096]">{numberFormat.format(issue.total)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[#e3eeee]">
                     <span
-                      className="block h-full rounded-full bg-[#1f86ec]"
+                      className="block h-full rounded-full bg-[#2a75bd]"
                       style={{ width: `${Math.round((issue.total / maxTotal) * 100)}%` }}
                     />
                   </div>
@@ -393,42 +520,48 @@ export function PublicDashboard() {
             </div>
           )}
         </section>
+          </>
+        )}
 
+        {activeView === "reports" && <ReportsPanel t={t} companies={companies} />}
+
+        {activeView === "engineers" && (
+          <>
         <AddEngineerCard
           language={language}
           t={t}
           onAdded={(engineer) => setEngineers((current) => [engineer, ...current])}
         />
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+        <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-                <HardHat className="h-6 w-6" aria-hidden="true" />
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+                <HardHat className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.registeredEngineers}</h2>
+              <h2 className="m-0 text-base font-bold text-[#17233a]">{t.registeredEngineers}</h2>
             </div>
-            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
+            <span className="rounded-full bg-[#eef2f6] px-3 py-1 text-xs font-bold text-[#536174]">
               {numberFormat.format(engineers.length)}
             </span>
           </div>
 
           {engineers.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
+            <p className="m-0 rounded-lg border border-dashed border-[#cfd7e1] bg-[#f8fafb] p-6 text-center text-sm text-[#66758a]">
               {t.noEngineers}
             </p>
           ) : (
             <>
               {engineerActionError && (
-                <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                   {engineerActionError}
                 </p>
               )}
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 xl:grid-cols-2">
               {engineers.map((engineer) => (
                 <article
                   key={engineer.id}
-                  className="rounded-2xl border border-[#d7e4f5] bg-[#f8fbff] p-5 transition-colors hover:border-[#a8c2e6] hover:bg-[#f1f6fd]"
+                  className="rounded-lg border border-[#dfe4ea] bg-[#fbfcfd] p-4 transition-colors hover:border-[#b7c4d3]"
                 >
                   <div className="flex items-start gap-3">
                     <EngineerAvatar
@@ -437,15 +570,15 @@ export function PublicDashboard() {
                       onPreview={(src) => setPreviewImage({ src, alt: engineer.name })}
                     />
                     <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-base text-[#15294d]">{engineer.name}</strong>
-                      <span className="block truncate text-sm text-[#5b6b85]">
+                      <strong className="block truncate text-base text-[#17233a]">{engineer.name}</strong>
+                      <span className="block truncate text-sm text-[#66758a]">
                         {engineer.profession} · {getSpecialtyLabel(engineer.specialty, language)}
                       </span>
                       <span
                         className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${
                           engineer.is_available
-                            ? "bg-[#e3f3e7] text-[#2c8b4b]"
-                            : "bg-[#eef3f1] text-[#5b6b85]"
+                            ? "bg-[#e8f5ed] text-[#287a4e]"
+                            : "bg-[#eef1f4] text-[#66758a]"
                         }`}
                       >
                         {engineer.is_available ? t.availableForWork : t.unavailableForWork}
@@ -457,7 +590,7 @@ export function PublicDashboard() {
                         onClick={() => setEditingEngineer(engineer)}
                         title={t.editEngineer}
                         aria-label={t.editEngineer}
-                        className="grid h-9 w-9 place-items-center rounded-lg bg-white text-[#1567c6] shadow-sm transition-colors hover:bg-[#dde9f9]"
+                        className="grid h-9 w-9 min-h-9 place-items-center rounded-lg border border-[#dfe4ea] bg-white text-[#1769aa] transition-colors hover:bg-[#eaf2fb]"
                       >
                         <Pencil className="h-4 w-4" aria-hidden="true" />
                       </button>
@@ -466,13 +599,13 @@ export function PublicDashboard() {
                         onClick={() => void handleEngineerDelete(engineer)}
                         title={t.deleteEngineer}
                         aria-label={t.deleteEngineer}
-                        className="grid h-9 w-9 place-items-center rounded-lg bg-white text-[#c84d3a] shadow-sm transition-colors hover:bg-red-50"
+                        className="grid h-9 w-9 min-h-9 place-items-center rounded-lg border border-[#ead8d5] bg-white text-[#b84d3f] transition-colors hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
-                  <dl className="mt-4 grid gap-2 border-t border-[#d7e4f5] pt-4 text-sm">
+                  <dl className="mt-4 grid gap-2 border-t border-[#e5e9ee] pt-4 text-sm">
                     <Row label={t.departmentLabel}>{engineer.department || "—"}</Row>
                     <Row label={t.experienceYears}>
                       {numberFormat.format(engineer.experience_years)}
@@ -490,40 +623,43 @@ export function PublicDashboard() {
             </>
           )}
         </section>
+          </>
+        )}
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+        {activeView === "companies" && (
+        <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-                <Building2 className="h-6 w-6" aria-hidden="true" />
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+                <Building2 className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.registeredCompanies}</h2>
+              <h2 className="m-0 text-base font-bold text-[#17233a]">{t.registeredCompanies}</h2>
             </div>
-            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
+            <span className="rounded-full bg-[#eef2f6] px-3 py-1 text-xs font-bold text-[#536174]">
               {numberFormat.format(companies.length)}
             </span>
           </div>
 
           {companies.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
+            <p className="m-0 rounded-lg border border-dashed border-[#cfd7e1] bg-[#f8fafb] p-6 text-center text-sm text-[#66758a]">
               {t.noCompanies}
             </p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 xl:grid-cols-2">
               {companies.map((company) => (
-                <article key={company.id} className="rounded-3xl bg-[#f4f8fd] p-5">
+                <article key={company.id} className="rounded-lg border border-[#dfe4ea] bg-[#fbfcfd] p-4">
                   <div className="flex items-start gap-3">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6] shadow-sm">
-                      <Building2 className="h-6 w-6" aria-hidden="true" />
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+                      <Building2 className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-lg text-[#15294d]">{company.company_name}</strong>
+                      <strong className="block truncate text-base text-[#17233a]">{company.company_name}</strong>
                       {company.contact_name && (
                         <span className="block truncate text-sm text-[#5b6b85]">{company.contact_name}</span>
                       )}
                     </div>
                   </div>
-                  <dl className="mt-4 grid gap-2 text-sm">
+                  <dl className="mt-4 grid gap-2 border-t border-[#e5e9ee] pt-4 text-sm">
                     <Row label={t.commercialRegister}>{company.commercial_register || "—"}</Row>
                     <Row label={t.phone} ltr>
                       {company.contact_phone || "—"}
@@ -539,7 +675,7 @@ export function PublicDashboard() {
                           href={getGoogleMapsSearchUrl(company.address)}
                           target="_blank"
                           rel="noreferrer"
-                          className="font-extrabold text-[#1567c6] underline decoration-[#bfd2ee] underline-offset-4"
+                          className="font-semibold text-[#1769aa] underline decoration-[#b8cee3] underline-offset-4"
                         >
                           {company.address}
                         </a>
@@ -553,22 +689,24 @@ export function PublicDashboard() {
             </div>
           )}
         </section>
+        )}
 
-        <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+        {activeView === "requests" && (
+        <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-                <ClipboardList className="h-6 w-6" aria-hidden="true" />
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+                <ClipboardList className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.requestsList}</h2>
+              <h2 className="m-0 text-base font-bold text-[#17233a]">{t.requestsList}</h2>
             </div>
-            <span className="rounded-full bg-[#e3edfb] px-3 py-1 text-sm font-extrabold text-[#1567c6]">
+            <span className="rounded-full bg-[#eef2f6] px-3 py-1 text-xs font-bold text-[#536174]">
               {numberFormat.format(requests.length)}
             </span>
           </div>
 
           {requests.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-[#bfd2ee] bg-[#f0f5fc] p-6 text-center text-sm text-[#5b6b85]">
+            <p className="m-0 rounded-lg border border-dashed border-[#cfd7e1] bg-[#f8fafb] p-6 text-center text-sm text-[#66758a]">
               {t.noRequests}
             </p>
           ) : (
@@ -587,7 +725,9 @@ export function PublicDashboard() {
             </div>
           )}
         </section>
-      </main>
+        )}
+        </main>
+      </div>
 
       {editingEngineer && (
         <EngineerEditorModal
@@ -638,12 +778,12 @@ function ReportsPanel({
         : {};
 
   return (
-    <section className="rounded-lg border border-[#d7e4f5] bg-white p-6 shadow-xl shadow-[#a8c2e6]/15 sm:p-7">
+    <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-          <FileText className="h-6 w-6" aria-hidden="true" />
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+          <FileText className="h-5 w-5" aria-hidden="true" />
         </span>
-        <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.reports}</h2>
+        <h2 className="m-0 text-base font-bold text-[#17233a]">{t.reports}</h2>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,1.4fr)_minmax(180px,1fr)_auto] lg:items-end">
@@ -710,7 +850,7 @@ function ReportsPanel({
         <div className="flex flex-wrap gap-2">
           <a
             href={getReportUrl(kind, "pdf", params)}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[#c84d3a] px-5 text-sm font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#a93f2f]"
+            className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#b84d3f] px-4 text-sm font-bold text-white transition-colors hover:bg-[#9f4035]"
             title={t.downloadPdf}
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
@@ -718,7 +858,7 @@ function ReportsPanel({
           </a>
           <a
             href={getReportUrl(kind, "xlsx", params)}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[#2c8b4b] px-5 text-sm font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#236e3c]"
+            className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#2f8755] px-4 text-sm font-bold text-white transition-colors hover:bg-[#286f48]"
             title={t.downloadExcel}
           >
             <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
@@ -797,12 +937,12 @@ function AddEngineerCard({
   }
 
   return (
-    <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+    <section className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
-          <UserPlus className="h-6 w-6" aria-hidden="true" />
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eaf2fb] text-[#1769aa]">
+          <UserPlus className="h-5 w-5" aria-hidden="true" />
         </span>
-        <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.addEngineerHere}</h2>
+        <h2 className="m-0 text-base font-bold text-[#17233a]">{t.addEngineerHere}</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
@@ -894,17 +1034,17 @@ function AddEngineerCard({
 
         <div className="md:col-span-2">
           {error && (
-            <p className="mt-1 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
+            <p className="mt-1 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
           )}
           {success && !error && (
-            <p className="mt-1 rounded-2xl bg-[#e3edfb] px-4 py-3 text-sm font-bold text-[#1567c6]">
+            <p className="mt-1 rounded-lg bg-[#eaf2fb] px-4 py-3 text-sm font-semibold text-[#1769aa]">
               {t.addEngineer} ✓
             </p>
           )}
           <button
             type="submit"
             disabled={submitting}
-            className="public-action mt-3 bg-[#1f86ec] text-white shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] disabled:cursor-not-allowed disabled:opacity-60"
+            className="public-action mt-3 bg-[#1769aa] text-white transition-colors hover:bg-[#12598f] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -1170,7 +1310,7 @@ function RequestCard({
   const isTerminal = isClosed || isRejected || request.status === "COMPLETED";
 
   return (
-    <article className="rounded-3xl bg-[#f4f8fd] p-5">
+    <article className="rounded-lg border border-[#dfe4ea] bg-[#fbfcfd] p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <strong className="block truncate text-base text-[#15294d]">
@@ -1187,7 +1327,7 @@ function RequestCard({
       <Stepper request={request} language={language} t={t} />
 
       {request.assigned_engineer_name && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-[#e5e9ee] bg-white px-4 py-3 text-sm">
           <UserCheck className="h-4 w-4 text-[#1567c6]" aria-hidden="true" />
           <span className="font-extrabold text-[#15294d]">{request.assigned_engineer_name}</span>
           {request.assigned_engineer_phone && (
@@ -1221,7 +1361,7 @@ function RequestCard({
           type="button"
           onClick={saveCost}
           disabled={costBusy}
-          className="inline-flex h-12 items-center gap-2 rounded-full bg-[#15294d] px-5 text-sm font-extrabold text-white transition-colors hover:bg-[#1c3263] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#344257] px-4 text-sm font-bold text-white transition-colors hover:bg-[#273448] disabled:cursor-not-allowed disabled:opacity-60"
           title={t.save}
         >
           {costBusy ? (
@@ -1236,7 +1376,7 @@ function RequestCard({
       </div>
 
       {!isTerminal && (
-        <div className="mt-4 grid gap-3 rounded-2xl border border-dashed border-[#bfd2ee] bg-white p-4">
+        <div className="mt-4 grid gap-3 rounded-lg border border-[#dfe4ea] bg-white p-4">
           <p className="m-0 text-xs font-extrabold uppercase tracking-wider text-[#1567c6]">
             {t.actions}
           </p>
@@ -1341,7 +1481,7 @@ function RequestCard({
           )}
 
           {error && (
-            <p className="m-0 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
+            <p className="m-0 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
           )}
         </div>
       )}
@@ -1496,7 +1636,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={busy || disabled}
-      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 ${tones[tone]}`}
+      className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${tones[tone]}`}
     >
       {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : icon}
       {children}
@@ -1523,12 +1663,12 @@ function MetricCard({
   };
   const t = tints[tint];
   return (
-    <div className="rounded-[2rem] bg-white/80 p-5 shadow-xl shadow-[#a8c2e6]/15 backdrop-blur-xl">
+    <div className="rounded-lg border border-[#dfe4ea] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="m-0 truncate text-xs font-extrabold uppercase tracking-wider text-[#7088a0]">{label}</p>
-        <span className={`grid h-10 w-10 place-items-center rounded-2xl ${t.bg} ${t.text}`}>{icon}</span>
+        <p className="m-0 truncate text-xs font-bold text-[#718096]">{label}</p>
+        <span className={`grid h-10 w-10 place-items-center rounded-lg ${t.bg} ${t.text}`}>{icon}</span>
       </div>
-      <strong className={`mt-4 block text-4xl font-extrabold ${t.text}`}>{value}</strong>
+      <strong className={`mt-4 block text-3xl font-bold ${t.text}`}>{value}</strong>
     </div>
   );
 }

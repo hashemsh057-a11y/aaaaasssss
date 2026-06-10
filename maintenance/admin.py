@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
+from .notifications import deliver_assignment_notification
 from .models import (
+    AssignmentNotification,
     CompanyProfile,
     EngineerProfile,
     MaintenanceRequest,
@@ -107,3 +109,56 @@ class PublicContactInquiryAdmin(admin.ModelAdmin):
     list_filter = ("status", "created_at")
     search_fields = ("company_name", "contact_name", "email", "phone", "message")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(AssignmentNotification)
+class AssignmentNotificationAdmin(admin.ModelAdmin):
+    list_display = (
+        "request",
+        "recipient_email",
+        "provider",
+        "status",
+        "attempts",
+        "sent_at",
+        "created_at",
+    )
+    list_filter = ("provider", "status", "created_at")
+    actions = ("retry_failed_notifications",)
+    search_fields = (
+        "recipient_email",
+        "subject",
+        "request__client_company__company_name",
+        "public_engineer__name",
+        "engineer_profile__employee_id",
+    )
+    readonly_fields = (
+        "request",
+        "public_engineer",
+        "engineer_profile",
+        "recipient_email",
+        "subject",
+        "provider",
+        "status",
+        "attempts",
+        "provider_response",
+        "error_message",
+        "sent_at",
+        "created_at",
+        "updated_at",
+    )
+
+    @admin.action(description="Retry selected failed assignment emails")
+    def retry_failed_notifications(self, request, queryset):
+        retried = 0
+        retryable = queryset.exclude(
+            status=AssignmentNotification.Status.SENT
+        ).exclude(provider=AssignmentNotification.Provider.DISABLED)
+        for notification in retryable:
+            if not notification.recipient_email:
+                continue
+            notification.status = AssignmentNotification.Status.PENDING
+            notification.error_message = ""
+            notification.save(update_fields=["status", "error_message", "updated_at"])
+            deliver_assignment_notification(notification.pk)
+            retried += 1
+        self.message_user(request, f"Retried {retried} assignment notification(s).")
