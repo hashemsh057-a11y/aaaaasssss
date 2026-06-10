@@ -117,6 +117,21 @@ function stageTimestamp(request: PublicTrackedRequest, stage: MaintenanceStatus)
   }
 }
 
+async function fetchWithRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 400 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export function PublicDashboard() {
   const [language, setLanguage] = useState<Language>("ar");
   const [activeView, setActiveView] = useState<DashboardView>("overview");
@@ -142,10 +157,10 @@ export function PublicDashboard() {
   const load = useCallback(async () => {
     const failures: string[] = [];
     const [statsResult, engineersResult, companiesResult, requestsResult] = await Promise.allSettled([
-      getPublicImpactStatistics(),
-      getPublicEngineers(),
-      getPublicCompanies(),
-      getPublicRequestsList()
+      fetchWithRetry(getPublicImpactStatistics),
+      fetchWithRetry(getPublicEngineers),
+      fetchWithRetry(getPublicCompanies),
+      fetchWithRetry(getPublicRequestsList)
     ]);
 
     if (statsResult.status === "fulfilled") setStats(statsResult.value);
