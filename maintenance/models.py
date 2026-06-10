@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q
+from django.utils.crypto import salted_hmac
 from django.utils import timezone
 
 
@@ -412,6 +413,9 @@ class PublicEngineer(models.Model):
     )
     is_available = models.BooleanField(default=True)
     availability_token = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+    device_id_hash = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
+    device_label = models.CharField(max_length=160, blank=True, default="")
+    device_last_seen_at = models.DateTimeField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -423,6 +427,13 @@ class PublicEngineer(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.specialty}"
+
+    @staticmethod
+    def hash_device_id(device_id):
+        normalized = str(device_id).strip()
+        if not normalized:
+            return None
+        return salted_hmac("public-engineer-device", normalized, algorithm="sha256").hexdigest()
 
 
 class PublicContactInquiry(models.Model):

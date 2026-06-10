@@ -32,12 +32,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   BackendUpgradeRequiredError,
   createPublicEngineer,
+  getPublicEngineerDeviceSession,
   getPublicEngineers,
   getPublicImpactStatistics,
+  linkPublicEngineerDevice,
   setPublicEngineerAvailability,
   submitPublicMaintenanceRequest,
   trackPublicRequest
 } from "@/src/lib/api";
+import { getOrCreateDeviceIdentity } from "@/src/lib/deviceIdentity";
 import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
 import {
   clearEngineerManagementSession,
@@ -55,6 +58,7 @@ import type {
   PublicTrackedRequest
 } from "@/src/lib/types";
 import { EngineerAvatar } from "./EngineerAvatar";
+import { ImageLightbox } from "./ImageLightbox";
 
 type RequestFormState = Omit<PublicMaintenanceRequestPayload, "preferred_date"> & {
   preferred_date: string;
@@ -137,6 +141,7 @@ type Copy = {
     markUnavailable: string;
     currentAvailability: string;
     backendUpgradeError: string;
+    recognizedDevice: string;
   };
   request: {
     eyebrow: string;
@@ -268,7 +273,8 @@ const copy: Record<Language, Copy> = {
       markAvailable: "تغيير الحالة إلى متوفر",
       markUnavailable: "تغيير الحالة إلى غير متوفر",
       currentAvailability: "الحالة الحالية",
-      backendUpgradeError: "الخادم لم يُحدّث بعد لدعم الصورة وحالة التوفر. حدّث PythonAnywhere ثم أعد التسجيل."
+      backendUpgradeError: "الخادم لم يُحدّث بعد لدعم الصورة وحالة التوفر. حدّث PythonAnywhere ثم أعد التسجيل.",
+      recognizedDevice: "تم التعرف على هذا الجهاز وربطه بحسابك"
     },
     request: {
       eyebrow: "تقديم طلب جديد",
@@ -382,7 +388,8 @@ const copy: Record<Language, Copy> = {
       markAvailable: "Set status to available",
       markUnavailable: "Set status to unavailable",
       currentAvailability: "Current status",
-      backendUpgradeError: "The server has not been updated for photos and availability yet. Update PythonAnywhere, then register again."
+      backendUpgradeError: "The server has not been updated for photos and availability yet. Update PythonAnywhere, then register again.",
+      recognizedDevice: "This device is recognized and linked to your account"
     },
     request: {
       eyebrow: "New request",
@@ -584,9 +591,16 @@ export function PublicLanding() {
   const DirectionArrow = isRtl ? ArrowLeft : ArrowRight;
 
   useEffect(() => {
-    getPublicImpactStatistics()
-      .then(setImpactStats)
-      .catch(() => setImpactStats(null));
+    const refreshImpact = () => {
+      getPublicImpactStatistics()
+        .then(setImpactStats)
+        .catch(() => setImpactStats(null));
+    };
+    refreshImpact();
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshImpact();
+    }, 54_000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   async function handleTrackSubmit(event: FormEvent<HTMLFormElement>) {
@@ -937,7 +951,16 @@ export function PublicLanding() {
               )}
             </div>
 
-            <form onSubmit={handleRequestSubmit} className="rounded-[2rem] bg-white/76 p-5 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+            <form
+              onSubmit={handleRequestSubmit}
+              className="rounded-lg border border-[#d7e4f5] bg-white p-5 shadow-xl shadow-[#a8c2e6]/15 sm:p-7"
+            >
+              <div className="mb-6 flex items-center gap-3 border-b border-[#d7e4f5] pb-5">
+                <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#dde9f9] text-[#1567c6]">
+                  <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <strong className="text-lg text-[#15294d]">{t.request.title}</strong>
+              </div>
               <div className="grid gap-5 md:grid-cols-2">
                 <Field label={t.request.companyName}>
                   <input
@@ -1192,6 +1215,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const numberFormat = useMemo(
     () => new Intl.NumberFormat(language === "ar" ? "ar-LY" : "en-US"),
     [language]
@@ -1209,9 +1233,41 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             if (engineer) {
               setManagedEngineer(engineer);
               setAvailabilityToken(session.token);
+              if (!engineer.device_label) {
+                const device = getOrCreateDeviceIdentity();
+                linkPublicEngineerDevice(engineer.id, device.id, device.label)
+                  .then((linked) => {
+                    if (!active) return;
+                    setManagedEngineer(linked);
+                    setEngineers((current) =>
+                      current.map((item) => (item.id === linked.id ? linked : item))
+                    );
+                  })
+                  .catch(() => {
+                    /* The existing local management session remains usable. */
+                  });
+              }
             } else {
               clearEngineerManagementSession();
             }
+          } else {
+            const device = getOrCreateDeviceIdentity();
+            getPublicEngineerDeviceSession(device.id)
+              .then((restored) => {
+                if (!active) return;
+                setManagedEngineer(restored);
+                setAvailabilityToken(restored.availability_token);
+                saveEngineerManagementSession({
+                  id: restored.id,
+                  token: restored.availability_token
+                });
+                setEngineers((current) =>
+                  current.map((item) => (item.id === restored.id ? restored : item))
+                );
+              })
+              .catch(() => {
+                /* This device has not registered an engineer yet. */
+              });
           }
         }
       })
@@ -1234,6 +1290,7 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
     setError(null);
     setJustAdded(false);
     try {
+      const device = getOrCreateDeviceIdentity();
       const created = await createPublicEngineer({
         name: trimmedName,
         phone: trimmedPhone,
@@ -1242,7 +1299,9 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
         specialty,
         profession: profession.trim(),
         experience_years: Number(experienceYears),
-        avatar
+        avatar,
+        device_id: device.id,
+        device_label: device.label
       });
       setEngineers((current) => [created, ...current]);
       setManagedEngineer(created);
@@ -1288,8 +1347,9 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
   }
 
   return (
-    <section id="engineers" className="bg-[#fbfdff] py-20 sm:py-24">
-      <div className="container mx-auto px-4 sm:px-6">
+    <>
+      <section id="engineers" className="bg-[#fbfdff] py-20 sm:py-24">
+        <div className="container mx-auto px-4 sm:px-6">
         <div className="mx-auto mb-12 max-w-3xl text-center">
           <span className="text-sm font-extrabold text-[#1567c6]">{t.engineers.eyebrow}</span>
           <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#15294d] md:text-4xl">{t.engineers.title}</h2>
@@ -1299,8 +1359,14 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           <form
             onSubmit={handleAdd}
-            className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7"
+            className="rounded-lg border border-[#d7e4f5] bg-white p-6 shadow-xl shadow-[#a8c2e6]/15 sm:p-7"
           >
+            <div className="mb-6 flex items-center gap-3 border-b border-[#d7e4f5] pb-5">
+              <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#dde9f9] text-[#1567c6]">
+                <UserPlus className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <strong className="text-lg text-[#15294d]">{t.engineers.title}</strong>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.engineers.name} icon={HardHat}>
                 <input
@@ -1403,7 +1469,11 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             {managedEngineer && (
               <div className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl">
                 <div className="flex items-center gap-4">
-                  <EngineerAvatar src={managedEngineer.avatar} alt={managedEngineer.name} />
+                  <EngineerAvatar
+                    src={managedEngineer.avatar}
+                    alt={managedEngineer.name}
+                    onPreview={(src) => setPreviewImage({ src, alt: managedEngineer.name })}
+                  />
                   <div className="min-w-0">
                     <h3 className="m-0 truncate text-lg font-extrabold text-[#15294d]">
                       {managedEngineer.name}
@@ -1411,6 +1481,11 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
                     <p className="m-0 mt-1 truncate text-sm text-[#5b6b85]">
                       {managedEngineer.profession} · {managedEngineer.department}
                     </p>
+                    {managedEngineer.device_label && (
+                      <p className="m-0 mt-2 text-xs font-bold text-[#2c8b4b]">
+                        {t.engineers.recognizedDevice}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="mt-5">
@@ -1495,8 +1570,16 @@ function EngineersSection({ copy: t, language }: { copy: Copy; language: Languag
             </div>
           </div>
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
+      {previewImage && (
+        <ImageLightbox
+          src={previewImage.src}
+          alt={previewImage.alt}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
+    </>
   );
 }
 

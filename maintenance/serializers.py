@@ -524,6 +524,7 @@ class PublicCompanyListSerializer(serializers.ModelSerializer):
 
 class PublicEngineerSerializer(serializers.ModelSerializer):
     specialty_display = serializers.CharField(source="get_specialty_display", read_only=True)
+    device_id = serializers.CharField(write_only=True, required=False, allow_blank=False, max_length=128)
 
     class Meta:
         model = PublicEngineer
@@ -539,9 +540,12 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
             "avatar",
             "experience_years",
             "is_available",
+            "device_id",
+            "device_label",
+            "device_last_seen_at",
             "created_at",
         ]
-        read_only_fields = ["id", "specialty_display", "created_at"]
+        read_only_fields = ["id", "specialty_display", "device_last_seen_at", "created_at"]
         extra_kwargs = {
             "email": {"required": True, "allow_blank": False},
             "department": {"required": True, "allow_blank": False},
@@ -598,16 +602,39 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
         return ContentFile(output.getvalue(), name=f"{uuid4().hex}.webp")
 
     def create(self, validated_data):
+        device_id = validated_data.pop("device_id", None)
+        if device_id:
+            device_hash = PublicEngineer.hash_device_id(device_id)
+            if PublicEngineer.objects.filter(device_id_hash=device_hash).exists():
+                raise serializers.ValidationError(
+                    {"device_id": "This device is already linked to an engineer profile."}
+                )
+            validated_data["device_id_hash"] = device_hash
+            validated_data["device_last_seen_at"] = timezone.now()
         avatar = validated_data.get("avatar")
         if avatar:
             validated_data["avatar"] = self._avatar_as_webp(avatar)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
+        previous_avatar = instance.avatar.name if instance.avatar else None
+        device_id = validated_data.pop("device_id", None)
+        if device_id:
+            device_hash = PublicEngineer.hash_device_id(device_id)
+            duplicate = PublicEngineer.objects.filter(device_id_hash=device_hash).exclude(pk=instance.pk)
+            if duplicate.exists():
+                raise serializers.ValidationError(
+                    {"device_id": "This device is already linked to another engineer profile."}
+                )
+            validated_data["device_id_hash"] = device_hash
+            validated_data["device_last_seen_at"] = timezone.now()
         avatar = validated_data.get("avatar")
         if avatar:
             validated_data["avatar"] = self._avatar_as_webp(avatar)
-        return super().update(instance, validated_data)
+        updated = super().update(instance, validated_data)
+        if previous_avatar and avatar and previous_avatar != updated.avatar.name:
+            updated.avatar.storage.delete(previous_avatar)
+        return updated
 
 
 class PublicEngineerCreateSerializer(PublicEngineerSerializer):

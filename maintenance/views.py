@@ -220,17 +220,44 @@ class PublicCapabilitiesAPIView(APIView):
     def get(self, request):
         return Response(
             {
-                "engineer_profile_version": 2,
+                "engineer_profile_version": 3,
                 "engineer_avatar_webp": True,
                 "engineer_availability": True,
+                "engineer_device_identity": True,
+                "engineer_profile_editing": True,
             }
         )
 
 
-class PublicEngineerDeleteAPIView(generics.DestroyAPIView):
+class PublicEngineerDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
     serializer_class = PublicEngineerSerializer
     queryset = PublicEngineer.objects.all()
+
+    def perform_destroy(self, instance):
+        avatar_name = instance.avatar.name if instance.avatar else None
+        avatar_storage = instance.avatar.storage if instance.avatar else None
+        super().perform_destroy(instance)
+        if avatar_name and avatar_storage:
+            avatar_storage.delete(avatar_name)
+
+
+class PublicEngineerDeviceSessionAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        device_id = request.data.get("device_id")
+        if not device_id:
+            raise drf_serializers.ValidationError({"device_id": "Required."})
+        engineer = get_object_or_404(
+            PublicEngineer,
+            device_id_hash=PublicEngineer.hash_device_id(device_id),
+        )
+        engineer.device_last_seen_at = timezone.now()
+        engineer.save(update_fields=["device_last_seen_at"])
+        return Response(
+            PublicEngineerCreateSerializer(engineer, context={"request": request}).data
+        )
 
 
 class PublicEngineerAvailabilityAPIView(APIView):

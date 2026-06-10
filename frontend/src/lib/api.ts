@@ -247,9 +247,11 @@ export async function createPublicEngineer(payload: PublicEngineerPayload) {
     throw new BackendUpgradeRequiredError();
   }
   if (
-    capabilities.engineer_profile_version < 2 ||
+    capabilities.engineer_profile_version < 3 ||
     !capabilities.engineer_avatar_webp ||
-    !capabilities.engineer_availability
+    !capabilities.engineer_availability ||
+    !capabilities.engineer_device_identity ||
+    !capabilities.engineer_profile_editing
   ) {
     throw new BackendUpgradeRequiredError();
   }
@@ -266,6 +268,12 @@ export async function createPublicEngineer(payload: PublicEngineerPayload) {
   if (payload.avatar) {
     formData.append("avatar", payload.avatar);
   }
+  if (payload.device_id) {
+    formData.append("device_id", payload.device_id);
+  }
+  if (payload.device_label) {
+    formData.append("device_label", payload.device_label);
+  }
   const created = await apiFetch<PublicEngineerRegistration>("/public/engineers/", {
     method: "POST",
     body: formData
@@ -278,6 +286,41 @@ export async function createPublicEngineer(payload: PublicEngineerPayload) {
     throw new BackendUpgradeRequiredError();
   }
   return created;
+}
+
+export function getPublicEngineerDeviceSession(deviceId: string) {
+  return apiFetch<PublicEngineerRegistration>("/public/engineer-device-session/", {
+    method: "POST",
+    body: JSON.stringify({ device_id: deviceId })
+  });
+}
+
+export function updatePublicEngineer(id: number, payload: PublicEngineerPayload) {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append("phone", payload.phone);
+  formData.append("email", payload.email);
+  formData.append("department", payload.department);
+  formData.append("specialty", payload.specialty);
+  formData.append("profession", payload.profession);
+  formData.append("experience_years", String(payload.experience_years));
+  if (payload.avatar) {
+    formData.append("avatar", payload.avatar);
+  }
+  return apiFetch<PublicEngineer>(`/public/engineers/${id}/`, {
+    method: "PATCH",
+    body: formData
+  });
+}
+
+export function linkPublicEngineerDevice(id: number, deviceId: string, deviceLabel: string) {
+  const formData = new FormData();
+  formData.append("device_id", deviceId);
+  formData.append("device_label", deviceLabel);
+  return apiFetch<PublicEngineer>(`/public/engineers/${id}/`, {
+    method: "PATCH",
+    body: formData
+  });
 }
 
 export function setPublicEngineerAvailability(

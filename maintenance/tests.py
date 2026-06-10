@@ -259,9 +259,11 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         response = self.client.get(reverse("public-capabilities"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["engineer_profile_version"], 2)
+        self.assertEqual(response.data["engineer_profile_version"], 3)
         self.assertTrue(response.data["engineer_avatar_webp"])
         self.assertTrue(response.data["engineer_availability"])
+        self.assertTrue(response.data["engineer_device_identity"])
+        self.assertTrue(response.data["engineer_profile_editing"])
 
     def test_public_tracking_returns_limited_ticket_data(self):
         maintenance_request = self.create_request()
@@ -322,6 +324,8 @@ class PublicEndpointTests(MaintenanceAPITestCase):
             "profession": "HVAC Engineer",
             "experience_years": 8,
             "avatar": self.engineer_avatar(),
+            "device_id": "0d64a0b2-39b5-4583-8314-abb1d203c79d",
+            "device_label": "Chrome on Windows",
         }
 
         with tempfile.TemporaryDirectory() as media_root:
@@ -341,11 +345,107 @@ class PublicEndpointTests(MaintenanceAPITestCase):
                 self.assertTrue(engineer.avatar.name.endswith(".webp"))
                 with Image.open(engineer.avatar.path) as saved_avatar:
                     self.assertEqual(saved_avatar.format, "WEBP")
+                self.assertIsNotNone(engineer.device_id_hash)
+                self.assertNotEqual(
+                    engineer.device_id_hash,
+                    "0d64a0b2-39b5-4583-8314-abb1d203c79d",
+                )
+                self.assertEqual(engineer.device_label, "Chrome on Windows")
                 self.assertTrue(engineer.is_available)
                 self.assertIn("availability_token", response.data)
+                self.assertNotIn("device_id", response.data)
 
                 list_response = self.client.get(reverse("public-engineer-list-create"))
                 self.assertNotIn("availability_token", list_response.data[0])
+
+    def test_engineer_session_can_be_restored_from_same_device(self):
+        device_id = "f98c58a7-026f-4fc1-8118-38890d250946"
+        engineer = PublicEngineer.objects.create(
+            name="Ayoub Salem",
+            phone="+218 91 111 2222",
+            email="ayoub@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.NETWORKS,
+            profession="Network Engineer",
+            experience_years=3,
+            device_id_hash=PublicEngineer.hash_device_id(device_id),
+            device_label="Safari on iPhone",
+        )
+
+        response = self.client.post(
+            reverse("public-engineer-device-session"),
+            {"device_id": device_id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], engineer.id)
+        self.assertEqual(response.data["name"], "Ayoub Salem")
+        self.assertEqual(response.data["email"], "ayoub@example.com")
+        self.assertEqual(response.data["availability_token"], str(engineer.availability_token))
+        engineer.refresh_from_db()
+        self.assertIsNotNone(engineer.device_last_seen_at)
+
+    def test_same_device_cannot_register_two_engineers(self):
+        device_id = "b6df91ff-1ceb-4df3-93bd-d00cbcfc6891"
+        PublicEngineer.objects.create(
+            name="Existing Engineer",
+            phone="+218 91 222 3333",
+            email="existing-device@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=5,
+            device_id_hash=PublicEngineer.hash_device_id(device_id),
+        )
+
+        response = self.client.post(
+            reverse("public-engineer-list-create"),
+            {
+                "name": "Second Engineer",
+                "phone": "+218 91 444 5555",
+                "email": "second-device@example.com",
+                "department": "Operations",
+                "specialty": MaintenanceSpecialty.HVAC,
+                "profession": "HVAC Engineer",
+                "experience_years": 2,
+                "device_id": device_id,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("device_id", response.data)
+
+    def test_dashboard_can_edit_and_delete_public_engineer(self):
+        engineer = PublicEngineer.objects.create(
+            name="Engineer Before Edit",
+            phone="+218 91 333 4444",
+            email="before-edit@example.com",
+            department="Support",
+            specialty=MaintenanceSpecialty.SOFTWARE,
+            profession="Software Engineer",
+            experience_years=2,
+        )
+        detail_url = reverse("public-engineer-detail", args=[engineer.id])
+
+        update_response = self.client.patch(
+            detail_url,
+            {
+                "name": "Engineer After Edit",
+                "email": "after-edit@example.com",
+                "experience_years": 6,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["name"], "Engineer After Edit")
+        self.assertEqual(update_response.data["experience_years"], 6)
+
+        delete_response = self.client.delete(detail_url)
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(PublicEngineer.objects.filter(pk=engineer.id).exists())
 
     def test_engineer_can_update_availability_only_with_management_token(self):
         engineer = PublicEngineer.objects.create(

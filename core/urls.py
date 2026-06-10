@@ -17,7 +17,8 @@ from maintenance.views import (
     PublicCompanyListAPIView,
     PublicCapabilitiesAPIView,
     PublicContactInquiryAPIView,
-    PublicEngineerDeleteAPIView,
+    PublicEngineerDetailAPIView,
+    PublicEngineerDeviceSessionAPIView,
     PublicEngineerAvailabilityAPIView,
     PublicEngineerListCreateAPIView,
     PublicImpactStatisticsAPIView,
@@ -48,7 +49,12 @@ urlpatterns = [
     path("api/public/capabilities/", PublicCapabilitiesAPIView.as_view(), name="public-capabilities"),
     path("api/public/companies-list/", PublicCompanyListAPIView.as_view(), name="public-company-list"),
     path("api/public/engineers/", PublicEngineerListCreateAPIView.as_view(), name="public-engineer-list-create"),
-    path("api/public/engineers/<int:pk>/", PublicEngineerDeleteAPIView.as_view(), name="public-engineer-delete"),
+    path("api/public/engineers/<int:pk>/", PublicEngineerDetailAPIView.as_view(), name="public-engineer-detail"),
+    path(
+        "api/public/engineer-device-session/",
+        PublicEngineerDeviceSessionAPIView.as_view(),
+        name="public-engineer-device-session",
+    ),
     path(
         "api/public/engineers/<int:pk>/availability/",
         PublicEngineerAvailabilityAPIView.as_view(),

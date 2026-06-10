@@ -163,6 +163,8 @@ export type PublicEngineer = {
   avatar: string | null;
   experience_years: number;
   is_available: boolean;
+  device_label: string;
+  device_last_seen_at: string | null;
   created_at: string;
 };
 
@@ -175,6 +177,8 @@ export type PublicEngineerPayload = {
   profession: string;
   experience_years: number;
   avatar?: File | null;
+  device_id?: string;
+  device_label?: string;
 };
 
 export type PublicEngineerRegistration = PublicEngineer & {
@@ -185,6 +189,8 @@ export type PublicCapabilities = {
   engineer_profile_version: number;
   engineer_avatar_webp: boolean;
   engineer_availability: boolean;
+  engineer_device_identity: boolean;
+  engineer_profile_editing: boolean;
 };
 
 export type PublicCompany = {

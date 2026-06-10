@@ -15,11 +15,13 @@ import {
   LogOut,
   Mail,
   MapPin,
+  Pencil,
   Phone,
   Play,
   PlayCircle,
   RefreshCw,
   Save,
+  Trash2,
   UserCheck,
   UserPlus,
   Users,
@@ -33,16 +35,21 @@ import {
   BackendUpgradeRequiredError,
   adminTransitionRequest,
   createPublicEngineer,
+  deletePublicEngineer,
   getReportUrl,
   getPublicCompanies,
   getPublicEngineers,
   getPublicImpactStatistics,
   getPublicRequestsList,
-  setRequestCost
+  setRequestCost,
+  updatePublicEngineer
 } from "@/src/lib/api";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
 import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
-import { saveEngineerManagementSession } from "@/src/lib/engineerSession";
+import {
+  clearEngineerManagementSession,
+  loadEngineerManagementSession
+} from "@/src/lib/engineerSession";
 import { DashboardLogin, useDashboardSession } from "./DashboardLogin";
 import type {
   Language,
@@ -50,11 +57,13 @@ import type {
   MaintenanceStatus,
   PublicCompany,
   PublicEngineer,
+  PublicEngineerPayload,
   PublicImpactStatistics,
   PublicTrackedRequest,
   ReportKind
 } from "@/src/lib/types";
 import { EngineerAvatar } from "./EngineerAvatar";
+import { ImageLightbox } from "./ImageLightbox";
 
 type FetchState = "idle" | "loading" | "ready" | "error";
 
@@ -116,6 +125,9 @@ export function PublicDashboard() {
   const [state, setState] = useState<FetchState>("loading");
   const [errors, setErrors] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingEngineer, setEditingEngineer] = useState<PublicEngineer | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [engineerActionError, setEngineerActionError] = useState<string | null>(null);
 
   const t = copy[language];
   const dir = languages[language].dir;
@@ -161,6 +173,24 @@ export function PublicDashboard() {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!session.authenticated) return;
+
+    const refreshLiveData = () => {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    };
+    const intervalId = window.setInterval(refreshLiveData, 27_000);
+    window.addEventListener("focus", refreshLiveData);
+    document.addEventListener("visibilitychange", refreshLiveData);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshLiveData);
+      document.removeEventListener("visibilitychange", refreshLiveData);
+    };
+  }, [load, session.authenticated]);
+
   async function refresh() {
     setRefreshing(true);
     await load();
@@ -182,6 +212,26 @@ export function PublicDashboard() {
   async function handleCostUpdate(requestId: number, cost: string | null) {
     const updated = await setRequestCost(requestId, cost);
     setRequests((current) => current.map((request) => (request.id === updated.id ? updated : request)));
+  }
+
+  async function handleEngineerUpdate(id: number, payload: PublicEngineerPayload) {
+    const updated = await updatePublicEngineer(id, payload);
+    setEngineers((current) => current.map((engineer) => (engineer.id === id ? updated : engineer)));
+    setEditingEngineer(null);
+  }
+
+  async function handleEngineerDelete(engineer: PublicEngineer) {
+    if (!window.confirm(t.confirmDeleteEngineer)) return;
+    setEngineerActionError(null);
+    try {
+      await deletePublicEngineer(engineer.id);
+      setEngineers((current) => current.filter((item) => item.id !== engineer.id));
+      if (loadEngineerManagementSession()?.id === engineer.id) {
+        clearEngineerManagementSession();
+      }
+    } catch {
+      setEngineerActionError(t.deleteEngineerError);
+    }
   }
 
   const recurring = stats?.top_recurring_maintenance_issues ?? [];
@@ -368,14 +418,24 @@ export function PublicDashboard() {
               {t.noEngineers}
             </p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <>
+              {engineerActionError && (
+                <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                  {engineerActionError}
+                </p>
+              )}
+              <div className="grid gap-3 md:grid-cols-2">
               {engineers.map((engineer) => (
                 <article
                   key={engineer.id}
-                  className="rounded-3xl bg-[#f4f8fd] p-5 transition-colors hover:bg-[#e3edfb]"
+                  className="rounded-2xl border border-[#d7e4f5] bg-[#f8fbff] p-5 transition-colors hover:border-[#a8c2e6] hover:bg-[#f1f6fd]"
                 >
                   <div className="flex items-start gap-3">
-                    <EngineerAvatar src={engineer.avatar} alt={engineer.name} />
+                    <EngineerAvatar
+                      src={engineer.avatar}
+                      alt={engineer.name}
+                      onPreview={(src) => setPreviewImage({ src, alt: engineer.name })}
+                    />
                     <div className="min-w-0 flex-1">
                       <strong className="block truncate text-base text-[#15294d]">{engineer.name}</strong>
                       <span className="block truncate text-sm text-[#5b6b85]">
@@ -390,6 +450,26 @@ export function PublicDashboard() {
                       >
                         {engineer.is_available ? t.availableForWork : t.unavailableForWork}
                       </span>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingEngineer(engineer)}
+                        title={t.editEngineer}
+                        aria-label={t.editEngineer}
+                        className="grid h-9 w-9 place-items-center rounded-lg bg-white text-[#1567c6] shadow-sm transition-colors hover:bg-[#dde9f9]"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleEngineerDelete(engineer)}
+                        title={t.deleteEngineer}
+                        aria-label={t.deleteEngineer}
+                        className="grid h-9 w-9 place-items-center rounded-lg bg-white text-[#c84d3a] shadow-sm transition-colors hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
                     </div>
                   </div>
                   <dl className="mt-4 grid gap-2 border-t border-[#d7e4f5] pt-4 text-sm">
@@ -406,7 +486,8 @@ export function PublicDashboard() {
                   </dl>
                 </article>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </section>
 
@@ -507,6 +588,24 @@ export function PublicDashboard() {
           )}
         </section>
       </main>
+
+      {editingEngineer && (
+        <EngineerEditorModal
+          key={editingEngineer.id}
+          engineer={editingEngineer}
+          language={language}
+          t={t}
+          onClose={() => setEditingEngineer(null)}
+          onSave={handleEngineerUpdate}
+        />
+      )}
+      {previewImage && (
+        <ImageLightbox
+          src={previewImage.src}
+          alt={previewImage.alt}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
     </div>
   );
 }
@@ -539,7 +638,7 @@ function ReportsPanel({
         : {};
 
   return (
-    <section className="rounded-[2rem] bg-white/76 p-6 shadow-2xl shadow-[#a8c2e6]/20 backdrop-blur-xl sm:p-7">
+    <section className="rounded-lg border border-[#d7e4f5] bg-white p-6 shadow-xl shadow-[#a8c2e6]/15 sm:p-7">
       <div className="mb-5 flex items-center gap-3">
         <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#dde9f9] text-[#1567c6]">
           <FileText className="h-6 w-6" aria-hidden="true" />
@@ -674,7 +773,6 @@ function AddEngineerCard({
         experience_years: Number(experienceYears),
         avatar
       });
-      saveEngineerManagementSession({ id: created.id, token: created.availability_token });
       onAdded(created);
       setName("");
       setPhone("");
@@ -707,7 +805,7 @@ function AddEngineerCard({
         <h2 className="m-0 text-xl font-extrabold text-[#15294d]">{t.addEngineerHere}</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm">
           <span className="font-extrabold text-[#5b6b85]">{t.nameLabel}</span>
           <input
@@ -794,7 +892,7 @@ function AddEngineerCard({
           />
         </label>
 
-        <div className="md:col-span-2 xl:col-span-4">
+        <div className="md:col-span-2">
           {error && (
             <p className="mt-1 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
           )}
@@ -818,6 +916,183 @@ function AddEngineerCard({
         </div>
       </form>
     </section>
+  );
+}
+
+function EngineerEditorModal({
+  engineer,
+  language,
+  t,
+  onClose,
+  onSave
+}: {
+  engineer: PublicEngineer;
+  language: Language;
+  t: (typeof copy)[Language];
+  onClose: () => void;
+  onSave: (id: number, payload: PublicEngineerPayload) => Promise<void>;
+}) {
+  const [name, setName] = useState(engineer.name);
+  const [phone, setPhone] = useState(engineer.phone);
+  const [email, setEmail] = useState(engineer.email);
+  const [department, setDepartment] = useState(engineer.department);
+  const [specialty, setSpecialty] = useState<MaintenanceSpecialty>(engineer.specialty);
+  const [profession, setProfession] = useState(engineer.profession);
+  const [experienceYears, setExperienceYears] = useState(String(engineer.experience_years));
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(engineer.id, {
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        department: department.trim(),
+        specialty,
+        profession: profession.trim(),
+        experience_years: Number(experienceYears),
+        avatar
+      });
+    } catch {
+      setError(t.editEngineerError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] grid place-items-center overflow-y-auto bg-[#07142c]/55 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.editEngineer}
+    >
+      <form
+        onSubmit={submit}
+        className="my-auto w-full max-w-3xl rounded-lg bg-white p-5 shadow-2xl sm:p-7"
+      >
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <EngineerAvatar src={engineer.avatar} alt={engineer.name} className="h-14 w-14" />
+            <div className="min-w-0">
+              <h2 className="m-0 truncate text-xl font-extrabold text-[#15294d]">{t.editEngineer}</h2>
+              <p className="m-0 mt-1 truncate text-sm text-[#5b6b85]">{engineer.name}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#eef3f8] text-[#15294d]"
+            aria-label={t.cancel}
+          >
+            <XCircle className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <EditorField label={t.nameLabel} value={name} onChange={setName} required />
+          <EditorField label={t.phone} value={phone} onChange={setPhone} type="tel" dir="ltr" required />
+          <EditorField label={t.email} value={email} onChange={setEmail} type="email" dir="ltr" required />
+          <EditorField label={t.departmentLabel} value={department} onChange={setDepartment} required />
+          <label className="grid gap-2 text-sm">
+            <span className="font-extrabold text-[#5b6b85]">{t.specialtyLabel}</span>
+            <select
+              value={specialty}
+              onChange={(event) => setSpecialty(event.target.value as MaintenanceSpecialty)}
+              className="public-input"
+            >
+              {SPECIALTY_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {getSpecialtyLabel(value, language)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <EditorField label={t.professionLabel} value={profession} onChange={setProfession} required />
+          <EditorField
+            label={t.experienceYears}
+            value={experienceYears}
+            onChange={setExperienceYears}
+            type="number"
+            min="0"
+            max="60"
+            required
+          />
+          <label className="grid gap-2 text-sm">
+            <span className="font-extrabold text-[#5b6b85]">{t.engineerPhoto}</span>
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              onChange={(event) => setAvatar(event.target.files?.[0] ?? null)}
+              className="public-input file:me-3 file:border-0 file:bg-transparent file:font-bold file:text-[#1567c6]"
+            />
+          </label>
+        </div>
+
+        {error && (
+          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</p>
+        )}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="public-action bg-[#eef3f8] text-[#15294d]"
+          >
+            {t.cancel}
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="public-action bg-[#1f86ec] text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
+            {saving ? t.saving : t.saveChanges}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function EditorField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  dir,
+  min,
+  max,
+  required
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  dir?: "ltr" | "rtl";
+  min?: string;
+  max?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="grid gap-2 text-sm">
+      <span className="font-extrabold text-[#5b6b85]">{label}</span>
+      <input
+        type={type}
+        dir={dir}
+        min={min}
+        max={max}
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="public-input"
+      />
+    </label>
   );
 }
 
