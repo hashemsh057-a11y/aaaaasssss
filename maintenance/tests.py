@@ -646,6 +646,18 @@ class PublicEndpointTests(MaintenanceAPITestCase):
     PORTAL_OTP_COOLDOWN_SECONDS=0,
 )
 class PortalWorkflowTests(MaintenanceAPITestCase):
+    def test_cors_preflight_allows_portal_session_header(self):
+        response = self.client.options(
+            reverse("engineer-portal-dashboard"),
+            HTTP_ORIGIN="https://aaaaasssss.pages.dev",
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="GET",
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS="x-portal-token",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        allowed_headers = response.headers["Access-Control-Allow-Headers"].lower()
+        self.assertIn("x-portal-token", allowed_headers)
+
     def register_company(self, email="portal-company@example.com"):
         request_response = self.client.post(
             reverse("company-portal-request-code"),

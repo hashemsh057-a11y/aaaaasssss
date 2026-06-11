@@ -55,16 +55,23 @@ export function EngineerPortal() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [availabilityBusy, setAvailabilityBusy] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async (sessionToken: string, quiet = false) => {
     if (!quiet) setRefreshing(true);
     try {
       const data = await getEngineerPortalDashboard(sessionToken);
       setDashboard(data);
-    } catch {
-      window.localStorage.removeItem(ENGINEER_PORTAL_TOKEN_KEY);
-      setToken(null);
-      setDashboard(null);
+      setDashboardError(null);
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && [401, 403].includes(caught.status)) {
+        window.localStorage.removeItem(ENGINEER_PORTAL_TOKEN_KEY);
+        setToken(null);
+        setDashboard(null);
+        setDashboardError(null);
+      } else {
+        setDashboardError("تعذر تحميل لوحة المهندس مؤقتًا. أعد المحاولة بعد لحظات.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -105,6 +112,7 @@ export function EngineerPortal() {
     window.localStorage.removeItem(ENGINEER_PORTAL_TOKEN_KEY);
     setToken(null);
     setDashboard(null);
+    setDashboardError(null);
   }
 
   async function toggleAvailability() {
@@ -139,7 +147,16 @@ export function EngineerPortal() {
   );
 
   if (loading) return <PortalLoading />;
-  if (!token || !dashboard) return <EngineerAuth onAuthenticated={authenticated} />;
+  if (!token) return <EngineerAuth onAuthenticated={authenticated} />;
+  if (!dashboard) {
+    return (
+      <PortalLoadError
+        message={dashboardError ?? "تعذر تحميل بيانات لوحة المهندس."}
+        onRetry={() => void loadDashboard(token)}
+        refreshing={refreshing}
+      />
+    );
+  }
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#f3f6f9] text-[#17233a]">
@@ -572,6 +589,34 @@ function AuthInput({
       </span>
       {children}
     </label>
+  );
+}
+
+function PortalLoadError({
+  message,
+  onRetry,
+  refreshing
+}: {
+  message: string;
+  onRetry: () => void;
+  refreshing: boolean;
+}) {
+  return (
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-[#eef2f6] px-4 text-[#17233a]">
+      <section className="w-full max-w-md rounded-lg border border-[#d7dee7] bg-white p-8 text-center shadow-[0_20px_60px_rgba(23,35,58,0.10)]">
+        <RefreshCw className={`mx-auto h-8 w-8 text-[#1769aa] ${refreshing ? "animate-spin" : ""}`} />
+        <h1 className="mt-4 text-xl font-bold">تعذر فتح لوحة المهندس</h1>
+        <p className="mt-2 text-sm leading-6 text-[#66758a]">{message}</p>
+        <button
+          type="button"
+          disabled={refreshing}
+          onClick={onRetry}
+          className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1769aa] px-5 text-sm font-bold text-white"
+        >
+          إعادة المحاولة
+        </button>
+      </section>
+    </main>
   );
 }
 

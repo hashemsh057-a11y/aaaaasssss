@@ -69,6 +69,7 @@ export function CompanyPortal() {
   const [dashboard, setDashboard] = useState<CompanyPortalDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [filter, setFilter] = useState<RequestFilter>("ACTIVE");
   const [showComposer, setShowComposer] = useState(false);
 
@@ -77,10 +78,16 @@ export function CompanyPortal() {
       const data = await getCompanyPortalDashboard(sessionToken);
       setDashboard(data);
       setError(null);
-    } catch {
-      window.localStorage.removeItem(COMPANY_PORTAL_TOKEN_KEY);
-      setToken(null);
-      setDashboard(null);
+      setDashboardError(null);
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && [401, 403].includes(caught.status)) {
+        window.localStorage.removeItem(COMPANY_PORTAL_TOKEN_KEY);
+        setToken(null);
+        setDashboard(null);
+        setDashboardError(null);
+      } else {
+        setDashboardError("تعذر تحميل حساب الشركة مؤقتًا. أعد المحاولة بعد لحظات.");
+      }
     } finally {
       setLoading(false);
     }
@@ -120,8 +127,16 @@ export function CompanyPortal() {
     return <PortalLoading label="جارٍ فتح حساب الشركة" />;
   }
 
-  if (!token || !dashboard) {
+  if (!token) {
     return <CompanyAuth onAuthenticated={handleAuthenticated} />;
+  }
+  if (!dashboard) {
+    return (
+      <CompanyLoadError
+        message={dashboardError ?? "تعذر تحميل بيانات حساب الشركة."}
+        onRetry={() => void loadDashboard(token)}
+      />
+    );
   }
 
   const activeCount = dashboard.requests.filter((item) => ACTIVE_STATUSES.has(item.status)).length;
@@ -721,6 +736,31 @@ function Info({ label, value, ltr = false }: { label: string; value: string; ltr
 
 function Notice({ children, tone }: { children: React.ReactNode; tone: "error" }) {
   return <p className="m-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{children}</p>;
+}
+
+function CompanyLoadError({
+  message,
+  onRetry
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-[#eef2f6] px-4 text-[#17233a]">
+      <section className="w-full max-w-md rounded-lg border border-[#d7dee7] bg-white p-8 text-center shadow-[0_20px_60px_rgba(23,35,58,0.10)]">
+        <Building2 className="mx-auto h-8 w-8 text-[#1769aa]" aria-hidden="true" />
+        <h1 className="mt-4 text-xl font-bold">تعذر فتح حساب الشركة</h1>
+        <p className="mt-2 text-sm leading-6 text-[#66758a]">{message}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-5 inline-flex h-11 items-center justify-center rounded-lg bg-[#1769aa] px-5 text-sm font-bold text-white"
+        >
+          إعادة المحاولة
+        </button>
+      </section>
+    </main>
+  );
 }
 
 function PortalLoading({ label }: { label: string }) {
