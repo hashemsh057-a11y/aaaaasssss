@@ -2,7 +2,9 @@
 
 import {
   ArrowLeft,
+  BriefcaseBusiness,
   Building2,
+  CalendarDays,
   Camera,
   CheckCircle2,
   ClipboardCheck,
@@ -11,6 +13,7 @@ import {
   Loader2,
   LogOut,
   Mail,
+  MapPin,
   MessageSquareText,
   PauseCircle,
   PlayCircle,
@@ -159,8 +162,8 @@ export function EngineerPortal() {
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#f3f6f9] text-[#17233a]">
-      <header className="border-b border-[#d9e0e8] bg-white">
+    <main dir="rtl" className="min-h-screen bg-[#f4f7fa] text-[#17233a]">
+      <header className="sticky top-0 z-20 border-b border-[#d9e0e8] bg-white/95 backdrop-blur">
         <div className="mx-auto flex min-h-16 max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <EngineerAvatar
@@ -195,13 +198,38 @@ export function EngineerPortal() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1240px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[280px_1fr]">
-        <aside className="h-fit rounded-lg border border-[#d9e0e8] bg-white p-4">
-          <div className="flex items-center gap-3 border-b border-[#e3e8ed] pb-4">
+      <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
+        <section className="mb-6 flex flex-col gap-4 border-b border-[#dbe2e9] pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="text-xs font-bold text-[#1769aa]">مساحة العمل اليومية</span>
+            <h1 className="m-0 mt-2 text-2xl font-bold sm:text-3xl">مرحبًا، {dashboard.profile.name}</h1>
+            <p className="m-0 mt-2 text-sm leading-6 text-[#66758a]">
+              تابع المهام المسندة إليك وحدّث تقدم العمل لتصل التفاصيل إلى الإدارة والشركة فورًا.
+            </p>
+          </div>
+          <div className={`inline-flex h-10 items-center gap-2 self-start rounded-full border px-4 text-sm font-bold sm:self-auto ${
+            dashboard.profile.is_available
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${dashboard.profile.is_available ? "bg-emerald-500" : "bg-amber-500"}`} />
+            {dashboard.profile.is_available ? "متوفر لاستقبال مهام" : "غير متوفر حاليًا"}
+          </div>
+        </section>
+
+        <section className="mb-6 grid gap-3 sm:grid-cols-3">
+          <EngineerMetric label="المهام النشطة" value={activeRequests.length} icon={BriefcaseBusiness} />
+          <EngineerMetric label="الأعمال المنجزة" value={completedRequests.length} icon={CheckCircle2} tone="green" />
+          <EngineerMetric label="سنوات الخبرة" value={dashboard.profile.experience_years} icon={Clock3} tone="amber" suffix=" سنوات" />
+        </section>
+
+        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-lg border border-[#d9e0e8] bg-white p-5 lg:sticky lg:top-24">
+          <div className="flex items-center gap-3 border-b border-[#e3e8ed] pb-5">
             <EngineerAvatar
               src={getApiAssetUrl(dashboard.profile.avatar)}
               alt={dashboard.profile.name}
-              className="h-16 w-16"
+              className="h-16 w-16 ring-4 ring-[#eef4f9]"
             />
             <div className="min-w-0">
               <strong className="block truncate">{dashboard.profile.name}</strong>
@@ -212,7 +240,7 @@ export function EngineerPortal() {
             </div>
           </div>
 
-          <div className="py-4">
+          <div className="py-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="block text-xs font-bold text-[#66758a]">حالة التوفر</span>
@@ -225,8 +253,8 @@ export function EngineerPortal() {
                 disabled={availabilityBusy}
                 onClick={() => void toggleAvailability()}
                 title={dashboard.profile.is_available ? "تغيير إلى غير متوفر" : "تغيير إلى متوفر"}
-                className={`grid h-10 w-12 place-items-center rounded-lg ${
-                  dashboard.profile.is_available ? "bg-[#e5f4eb] text-[#237348]" : "bg-[#fff3d8] text-[#9b6500]"
+                className={`grid h-11 w-14 place-items-center rounded-lg border ${
+                  dashboard.profile.is_available ? "border-emerald-200 bg-[#e5f4eb] text-[#237348]" : "border-amber-200 bg-[#fff3d8] text-[#9b6500]"
                 }`}
               >
                 {availabilityBusy ? (
@@ -242,16 +270,18 @@ export function EngineerPortal() {
 
           <dl className="m-0 grid gap-3 border-t border-[#e3e8ed] pt-4 text-sm">
             <ProfileRow label="القسم" value={dashboard.profile.department} />
+            <ProfileRow label="التخصص" value={getSpecialtyLabel(dashboard.profile.specialty, "ar")} />
             <ProfileRow label="الخبرة" value={`${dashboard.profile.experience_years} سنوات`} />
-            <ProfileRow label="الطلبات النشطة" value={String(activeRequests.length)} />
-            <ProfileRow label="الطلبات المنجزة" value={String(completedRequests.length)} />
           </dl>
         </aside>
 
         <section className="min-w-0">
-          <div className="mb-4">
-            <h1 className="m-0 text-xl font-bold">المهام الحالية</h1>
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+            <h2 className="m-0 text-xl font-bold">المهام الحالية</h2>
             <p className="m-0 mt-1 text-sm text-[#66758a]">حدّث حالة العمل وأضف الملاحظات لتظهر فورًا في لوحة الإدارة.</p>
+            </div>
+            <span className="shrink-0 text-xs font-bold text-[#7b899a]">{activeRequests.length} مهام</span>
           </div>
 
           <div className="grid gap-4">
@@ -274,7 +304,7 @@ export function EngineerPortal() {
               <h2 className="mb-3 text-base font-bold">الأعمال المنجزة</h2>
               <div className="grid gap-3">
                 {completedRequests.map((request) => (
-                  <article key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d9e0e8] bg-white p-4">
+                  <article key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d9e0e8] bg-white p-4 transition hover:border-[#b8c8d8]">
                     <div>
                       <strong>طلب #{request.id} · {request.client_company_name}</strong>
                       <span className="mt-1 block text-sm text-[#66758a]">{getSpecialtyLabel(request.issue_type, "ar")}</span>
@@ -288,6 +318,7 @@ export function EngineerPortal() {
             </div>
           )}
         </section>
+        </div>
       </div>
     </main>
   );
@@ -648,10 +679,12 @@ function EngineerRequestCard({
   }
 
   return (
-    <article className="rounded-lg border border-[#d9e0e8] bg-white">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e3e8ed] p-4">
+    <article className="overflow-hidden rounded-lg border border-[#d9e0e8] bg-white transition hover:border-[#b8c8d8] hover:shadow-[0_12px_28px_rgba(23,35,58,0.06)]">
+      <div className="h-1 bg-[#1769aa]" />
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e3e8ed] p-4 sm:p-5">
         <div>
-          <strong className="text-base">طلب #{request.id} · {request.client_company_name}</strong>
+          <span className="text-xs font-bold text-[#1769aa]">طلب #{request.id}</span>
+          <strong className="mt-1 block text-base">{request.client_company_name}</strong>
           <p className="m-0 mt-1 text-sm text-[#66758a]">
             {getSpecialtyLabel(request.issue_type, "ar")} · {getPriorityLabel(request.priority, "ar")}
           </p>
@@ -661,9 +694,10 @@ function EngineerRequestCard({
         </span>
       </div>
 
-      <div className="grid gap-4 p-4 sm:grid-cols-2">
-        <TaskInfo label="الموقع" value={request.location_details} />
+      <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+        <TaskInfo icon={MapPin} label="الموقع" value={request.location_details} />
         <TaskInfo
+          icon={CalendarDays}
           label="الموعد"
           value={new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.preferred_date))}
           ltr
@@ -674,7 +708,7 @@ function EngineerRequestCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-y border-[#e3e8ed] bg-[#f8fafb] p-4">
+      <div className="flex flex-wrap gap-2 border-y border-[#e3e8ed] bg-[#f7f9fb] p-4 sm:px-5">
         {request.status === "ASSIGNED" && (
           <TaskButton icon={PlayCircle} disabled={busy} onClick={() => void update({ status: "IN_PROGRESS" })}>
             قبول وبدء العمل
@@ -703,7 +737,7 @@ function EngineerRequestCard({
         {busy && <Loader2 className="h-5 w-5 animate-spin self-center text-[#1769aa]" />}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 sm:p-5">
         <label className="grid gap-2">
           <span className="flex items-center gap-2 text-sm font-bold text-[#536174]">
             <MessageSquareText className="h-4 w-4 text-[#1769aa]" />
@@ -778,11 +812,42 @@ function TaskButton({
 }
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-center justify-between gap-3"><dt className="text-[#66758a]">{label}</dt><dd className="m-0 font-bold">{value || "—"}</dd></div>;
+  return <div className="flex items-start justify-between gap-3"><dt className="text-[#66758a]">{label}</dt><dd className="m-0 max-w-[150px] text-left font-bold">{value || "—"}</dd></div>;
 }
 
-function TaskInfo({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
-  return <div><span className="block text-xs font-bold text-[#7b899a]">{label}</span><span dir={ltr ? "ltr" : undefined} className="mt-1 block text-sm font-semibold">{value}</span></div>;
+function TaskInfo({ label, value, ltr = false, icon: Icon }: { label: string; value: string; ltr?: boolean; icon: typeof MapPin }) {
+  return <div className="flex min-w-0 gap-2"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#7990a7]" /><div className="min-w-0"><span className="block text-xs font-bold text-[#7b899a]">{label}</span><span dir={ltr ? "ltr" : undefined} className="mt-1 block break-words text-sm font-semibold">{value}</span></div></div>;
+}
+
+function EngineerMetric({
+  label,
+  value,
+  icon: Icon,
+  tone = "blue",
+  suffix = ""
+}: {
+  label: string;
+  value: number;
+  icon: typeof BriefcaseBusiness;
+  tone?: "blue" | "green" | "amber";
+  suffix?: string;
+}) {
+  const tones = {
+    blue: "bg-[#e8f1f9] text-[#1769aa]",
+    green: "bg-emerald-50 text-emerald-700",
+    amber: "bg-amber-50 text-amber-700"
+  };
+  return (
+    <div className="flex min-h-24 items-center gap-4 rounded-lg border border-[#d9e0e8] bg-white p-4 shadow-[0_6px_18px_rgba(23,35,58,0.04)]">
+      <span className={`grid h-11 w-11 place-items-center rounded-lg ${tones[tone]}`}>
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <div>
+        <span className="block text-xs font-semibold text-[#66758a]">{label}</span>
+        <strong className="mt-1 block text-2xl">{value}<small className="text-sm font-semibold text-[#66758a]">{suffix}</small></strong>
+      </div>
+    </div>
+  );
 }
 
 function EmptyState() {

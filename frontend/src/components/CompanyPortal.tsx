@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BadgeCheck,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  UserRound,
   Wrench
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -44,6 +46,16 @@ type AuthMode = "LOGIN" | "REGISTER";
 type RequestFilter = "ACTIVE" | "COMPLETED" | "ALL";
 
 const ACTIVE_STATUSES = new Set(["NEW", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "WAITING_SPARE_PARTS"]);
+const requestStatusTone: Record<string, string> = {
+  NEW: "border-sky-200 bg-sky-50 text-sky-700",
+  UNDER_REVIEW: "border-amber-200 bg-amber-50 text-amber-700",
+  ASSIGNED: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-700",
+  WAITING_SPARE_PARTS: "border-orange-200 bg-orange-50 text-orange-700",
+  COMPLETED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  CLOSED: "border-slate-200 bg-slate-50 text-slate-700",
+  CANCELLED: "border-red-200 bg-red-50 text-red-700"
+};
 const inputClass =
   "h-11 w-full rounded-lg border border-[#ccd6e2] bg-white px-3 text-sm text-[#17233a] outline-none transition focus:border-[#1769aa] focus:ring-4 focus:ring-[#1769aa]/10";
 
@@ -143,33 +155,77 @@ export function CompanyPortal() {
   const completedCount = dashboard.requests.filter((item) => ["COMPLETED", "CLOSED"].includes(item.status)).length;
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#f3f6f9] text-[#17233a]">
+    <main dir="rtl" className="min-h-screen bg-[#f4f7fa] text-[#17233a]">
       <PortalHeader
         label="بوابة الشركة"
         accountName={dashboard.profile.company_name}
         onSignOut={signOut}
       />
 
-      <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
+        <section className="mb-6 flex flex-col gap-4 border-b border-[#dbe2e9] pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-2 text-xs font-bold text-[#1769aa]">
+              <BadgeCheck className="h-4 w-4" aria-hidden="true" />
+              حساب شركة موثّق بالبريد
+            </span>
+            <h1 className="m-0 mt-2 text-2xl font-bold sm:text-3xl">{dashboard.profile.company_name}</h1>
+            <p className="m-0 mt-2 text-sm leading-6 text-[#66758a]">
+              تابع طلبات شركتك فقط، واعرف المهندس المعيّن وآخر تحديث لكل مهمة.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowComposer(true)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1769aa] px-5 text-sm font-bold text-white hover:bg-[#12598f]"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            طلب صيانة جديد
+          </button>
+        </section>
+
         <section className="mb-6 grid gap-3 sm:grid-cols-3">
           <Metric label="إجمالي الطلبات" value={dashboard.requests.length} icon={ClipboardList} />
           <Metric label="قيد التنفيذ" value={activeCount} icon={Clock3} tone="amber" />
           <Metric label="مكتملة" value={completedCount} icon={CheckCircle2} tone="green" />
         </section>
 
-        <section className="rounded-lg border border-[#d9e0e8] bg-white">
-          <div className="flex flex-col gap-4 border-b border-[#e1e6ec] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-lg border border-[#d9e0e8] bg-white p-5 lg:sticky lg:top-24">
+            <div className="flex items-center gap-3 border-b border-[#e5e9ee] pb-4">
+              <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#e8f1f9] text-[#1769aa]">
+                <Building2 className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm">{dashboard.profile.company_name}</strong>
+                <span className="mt-1 block text-xs text-[#728095]">ملف الشركة</span>
+              </div>
+            </div>
+            <dl className="m-0 grid gap-4 py-4 text-sm">
+              <CompanyProfileRow icon={UserRound} label="مسؤول التواصل" value={dashboard.profile.contact_name} />
+              <CompanyProfileRow icon={Mail} label="البريد" value={dashboard.profile.email} ltr />
+              <CompanyProfileRow icon={MapPin} label="العنوان" value={dashboard.profile.address} />
+            </dl>
+            <div className="border-t border-[#e5e9ee] pt-4">
+              <p className="m-0 text-xs leading-6 text-[#66758a]">
+                البيانات والطلبات المعروضة خاصة بهذا الحساب ولا تظهر للشركات الأخرى.
+              </p>
+            </div>
+          </aside>
+
+          <section className="min-w-0">
+          <div className="flex flex-col gap-4 border-b border-[#dbe2e9] pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="m-0 text-xl font-bold">طلبات الصيانة</h1>
-              <p className="m-0 mt-1 text-sm text-[#66758a]">كل الحالات والتحديثات المرتبطة بحساب شركتك.</p>
+              <h2 className="m-0 text-lg font-bold">طلبات الصيانة</h2>
+              <p className="m-0 mt-1 text-sm text-[#66758a]">الحالات والتحديثات المرتبطة بحساب شركتك.</p>
             </div>
             <button
               type="button"
               onClick={() => setShowComposer((current) => !current)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1769aa] px-4 text-sm font-bold text-white hover:bg-[#12598f]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#cdd9e5] bg-white px-4 text-sm font-bold text-[#1769aa] hover:bg-[#f4f8fb]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              طلب جديد
+              {showComposer ? "إغلاق النموذج" : "طلب جديد"}
             </button>
           </div>
 
@@ -186,7 +242,7 @@ export function CompanyPortal() {
             />
           )}
 
-          <div className="flex flex-wrap gap-2 border-b border-[#e1e6ec] px-4 py-3">
+          <div className="flex flex-wrap gap-2 border-b border-[#dbe2e9] py-3">
             {([
               ["ACTIVE", "الحالية"],
               ["COMPLETED", "المنجزة"],
@@ -201,11 +257,14 @@ export function CompanyPortal() {
                 }`}
               >
                 {label}
+                <span className="ms-2 text-xs opacity-70">
+                  {value === "ACTIVE" ? activeCount : value === "COMPLETED" ? completedCount : dashboard.requests.length}
+                </span>
               </button>
             ))}
           </div>
 
-          <div className="grid gap-3 p-4">
+          <div className="grid gap-3 py-4">
             {error && <Notice tone="error">{error}</Notice>}
             {visibleRequests.length === 0 ? (
               <div className="grid min-h-48 place-items-center rounded-lg border border-dashed border-[#cbd4df] bg-[#f8fafb] p-6 text-center">
@@ -218,7 +277,8 @@ export function CompanyPortal() {
               visibleRequests.map((request) => <CompanyRequestCard key={request.id} request={request} />)
             )}
           </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );
@@ -614,36 +674,45 @@ function RequestComposer({
 }
 
 function CompanyRequestCard({ request }: { request: PortalMaintenanceRequest }) {
+  const latestActivity = request.activities.at(-1);
   return (
-    <article className="rounded-lg border border-[#dce3ea] bg-white p-4">
+    <article className="overflow-hidden rounded-lg border border-[#dce3ea] bg-white transition hover:border-[#b8c8d8] hover:shadow-[0_10px_26px_rgba(23,35,58,0.06)]">
+      <div className="h-1 bg-[#1769aa]" />
+      <div className="p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <strong className="text-base">طلب #{request.id}</strong>
+          <div className="flex flex-wrap items-center gap-2">
+            <strong className="text-base">طلب #{request.id}</strong>
+            <span className="text-xs font-semibold text-[#7b899a]">{getSpecialtyLabel(request.issue_type, "ar")}</span>
+          </div>
           <p className="m-0 mt-1 text-sm text-[#66758a]">
-            {getSpecialtyLabel(request.issue_type, "ar")} · {getPriorityLabel(request.priority, "ar")}
+            أولوية {getPriorityLabel(request.priority, "ar")}
           </p>
         </div>
-        <span className="rounded-full bg-[#e8f1f9] px-3 py-1 text-xs font-bold text-[#1769aa]">
+        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${requestStatusTone[request.status] ?? requestStatusTone.NEW}`}>
           {statusLabels[request.status].ar}
         </span>
       </div>
-      <div className="mt-4 grid gap-3 border-t border-[#e6eaef] pt-4 text-sm sm:grid-cols-3">
-        <Info label="الموقع" value={request.location_details} />
-        <Info label="المهندس" value={request.assigned_engineer_name ?? "لم يعيّن بعد"} />
+      <div className="mt-5 grid gap-4 border-t border-[#edf0f3] pt-4 text-sm sm:grid-cols-3">
+        <Info icon={MapPin} label="الموقع" value={request.location_details} />
+        <Info icon={UserRound} label="المهندس" value={request.assigned_engineer_name ?? "بانتظار التعيين"} />
         <Info
+          icon={CalendarDays}
           label="الموعد"
           value={new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.preferred_date))}
           ltr
         />
       </div>
-      {request.activities.length > 0 && (
-        <div className="mt-4 border-t border-[#e6eaef] pt-4">
-          <p className="m-0 text-xs font-bold text-[#66758a]">آخر تحديث</p>
-          <p className="m-0 mt-1 text-sm text-[#17233a]">
-            {formatRequestActivity(request.activities.at(-1)!, "ar")}
-          </p>
+      {latestActivity && (
+        <div className="mt-4 flex gap-3 rounded-lg bg-[#f6f8fa] p-3">
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#1769aa]" />
+          <div>
+            <p className="m-0 text-xs font-bold text-[#66758a]">آخر تحديث</p>
+            <p className="m-0 mt-1 text-sm leading-6 text-[#17233a]">{formatRequestActivity(latestActivity, "ar")}</p>
+          </div>
         </div>
       )}
+      </div>
     </article>
   );
 }
@@ -658,7 +727,7 @@ function PortalHeader({
   onSignOut: () => void;
 }) {
   return (
-    <header className="border-b border-[#d9e0e8] bg-white">
+    <header className="sticky top-0 z-20 border-b border-[#d9e0e8] bg-white/95 backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <a href="/" className="shrink-0"><img src="/engiflow-logo.png" alt="EngiFlow" className="h-11 w-11 object-contain" /></a>
@@ -697,7 +766,7 @@ function Metric({
     green: "bg-[#e5f4eb] text-[#237348]"
   };
   return (
-    <div className="flex min-h-24 items-center gap-4 rounded-lg border border-[#d9e0e8] bg-white p-4">
+    <div className="flex min-h-24 items-center gap-4 rounded-lg border border-[#d9e0e8] bg-white p-4 shadow-[0_6px_18px_rgba(23,35,58,0.04)]">
       <span className={`grid h-11 w-11 place-items-center rounded-lg ${tones[tone]}`}><Icon className="h-5 w-5" /></span>
       <div><span className="block text-xs font-semibold text-[#66758a]">{label}</span><strong className="mt-1 block text-2xl">{value}</strong></div>
     </div>
@@ -730,8 +799,30 @@ function AuthFeature({ icon: Icon, text }: { icon: typeof ShieldCheck; text: str
   return <div className="flex items-center gap-3"><Icon className="h-5 w-5 text-[#80b7e4]" /><span>{text}</span></div>;
 }
 
-function Info({ label, value, ltr = false }: { label: string; value: string; ltr?: boolean }) {
-  return <div><span className="block text-xs font-semibold text-[#7b899a]">{label}</span><span dir={ltr ? "ltr" : undefined} className="mt-1 block font-semibold">{value}</span></div>;
+function Info({ label, value, ltr = false, icon: Icon }: { label: string; value: string; ltr?: boolean; icon: typeof MapPin }) {
+  return <div className="flex min-w-0 gap-2"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#7990a7]" /><div className="min-w-0"><span className="block text-xs font-semibold text-[#7b899a]">{label}</span><span dir={ltr ? "ltr" : undefined} className="mt-1 block break-words font-semibold">{value}</span></div></div>;
+}
+
+function CompanyProfileRow({
+  icon: Icon,
+  label,
+  value,
+  ltr = false
+}: {
+  icon: typeof Building2;
+  label: string;
+  value: string;
+  ltr?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 gap-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#7990a7]" aria-hidden="true" />
+      <div className="min-w-0">
+        <dt className="text-xs font-semibold text-[#7b899a]">{label}</dt>
+        <dd dir={ltr ? "ltr" : undefined} className="m-0 mt-1 break-words text-sm font-bold text-[#26364c]">{value || "—"}</dd>
+      </div>
+    </div>
+  );
 }
 
 function Notice({ children, tone }: { children: React.ReactNode; tone: "error" }) {
