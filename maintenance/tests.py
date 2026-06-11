@@ -25,6 +25,7 @@ from .models import (
     RequestActivity,
     User,
 )
+from .notifications import send_transactional_email
 
 
 class MaintenanceAPITestCase(APITestCase):
@@ -603,6 +604,40 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertIn("text", payload)
         self.assertIn("html", payload)
 
+    @override_settings(
+        ASSIGNMENT_EMAIL_PROVIDER="brevo",
+        BREVO_API_KEY="brevo-api-key",
+        BREVO_FROM_ADDRESS="notifications@example.com",
+        BREVO_FROM_NAME="EngiFlow",
+        BREVO_REPLY_TO="support@example.com",
+    )
+    def test_brevo_transactional_email_uses_api_payload(self):
+        brevo_response = MagicMock()
+        brevo_response.__enter__.return_value.read.return_value = json.dumps(
+            {"messageId": "<message-id@example.com>"}
+        ).encode("utf-8")
+
+        with patch("maintenance.notifications.urlopen", return_value=brevo_response) as mocked_urlopen:
+            provider, result = send_transactional_email(
+                "engineer@example.com",
+                "OTP",
+                "Your code is 1234",
+                "<p>Your code is <strong>1234</strong></p>",
+            )
+
+        self.assertEqual(provider, AssignmentNotification.Provider.BREVO)
+        self.assertEqual(result["messageId"], "<message-id@example.com>")
+        outgoing_request = mocked_urlopen.call_args.args[0]
+        self.assertEqual(outgoing_request.full_url, "https://api.brevo.com/v3/smtp/email")
+        payload = json.loads(outgoing_request.data.decode("utf-8"))
+        self.assertEqual(payload["to"], [{"email": "engineer@example.com"}])
+        self.assertEqual(
+            payload["sender"],
+            {"email": "notifications@example.com", "name": "EngiFlow"},
+        )
+        self.assertEqual(payload["replyTo"], {"email": "support@example.com"})
+        self.assertIn("htmlContent", payload)
+
 
 @override_settings(
     ASSIGNMENT_EMAIL_PROVIDER="smtp",
@@ -669,6 +704,27 @@ class PortalWorkflowTests(MaintenanceAPITestCase):
         self.assertEqual(response.data["requests"], [])
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("رمز التحقق", mail.outbox[0].subject)
+
+    @override_settings(PORTAL_OTP_TTL_MINUTES=5)
+    def test_portal_code_expires_after_five_minutes(self):
+        engineer = PublicEngineer.objects.create(
+            name="Five Minute Engineer",
+            phone="+218 91 800 4600",
+            email="five-minutes@example.com",
+            department="Networks",
+            specialty=MaintenanceSpecialty.NETWORKS,
+            profession="Network Engineer",
+            experience_years=3,
+        )
+
+        response = self.client.post(
+            reverse("engineer-portal-request-code"),
+            {"email": engineer.email},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["expires_in_seconds"], 300)
 
     @override_settings(PORTAL_OTP_EXPOSE_CODE=False)
     def test_portal_code_is_not_exposed_when_debug_response_is_disabled(self):

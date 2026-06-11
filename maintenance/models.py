@@ -469,6 +469,7 @@ class PublicContactInquiry(models.Model):
 class AssignmentNotification(models.Model):
     class Provider(models.TextChoices):
         CLOUDFLARE = "CLOUDFLARE", "Cloudflare Email"
+        BREVO = "BREVO", "Brevo"
         SMTP = "SMTP", "SMTP"
         DISABLED = "DISABLED", "Disabled"
 

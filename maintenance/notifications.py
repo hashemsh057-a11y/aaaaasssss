@@ -18,6 +18,14 @@ class AssignmentEmailError(RuntimeError):
 def _configured_provider():
     configured = settings.ASSIGNMENT_EMAIL_PROVIDER
     if configured == "auto":
+        brevo_ready = all(
+            [
+                settings.BREVO_API_KEY,
+                settings.BREVO_FROM_ADDRESS,
+            ]
+        )
+        if brevo_ready:
+            return AssignmentNotification.Provider.BREVO
         cloudflare_ready = all(
             [
                 settings.CLOUDFLARE_EMAIL_ACCOUNT_ID,
@@ -32,6 +40,7 @@ def _configured_provider():
         return AssignmentNotification.Provider.DISABLED
     providers = {
         "cloudflare": AssignmentNotification.Provider.CLOUDFLARE,
+        "brevo": AssignmentNotification.Provider.BREVO,
         "smtp": AssignmentNotification.Provider.SMTP,
         "disabled": AssignmentNotification.Provider.DISABLED,
     }
@@ -193,6 +202,53 @@ def _send_cloudflare_message(recipient_email, subject, text, html):
     return result
 
 
+def _send_brevo_message(recipient_email, subject, text, html):
+    missing = [
+        name
+        for name, value in [
+            ("BREVO_API_KEY", settings.BREVO_API_KEY),
+            ("BREVO_FROM_ADDRESS", settings.BREVO_FROM_ADDRESS),
+        ]
+        if not value
+    ]
+    if missing:
+        raise AssignmentEmailError(f"Missing Brevo email settings: {', '.join(missing)}")
+
+    payload = {
+        "sender": {
+            "email": settings.BREVO_FROM_ADDRESS,
+            "name": settings.BREVO_FROM_NAME,
+        },
+        "to": [{"email": recipient_email}],
+        "subject": subject,
+        "htmlContent": html,
+    }
+    if settings.BREVO_REPLY_TO:
+        payload["replyTo"] = {"email": settings.BREVO_REPLY_TO}
+
+    request = Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "api-key": settings.BREVO_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=settings.EMAIL_TIMEOUT) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise AssignmentEmailError(f"Brevo email HTTP {exc.code}: {detail}") from exc
+    except (URLError, TimeoutError) as exc:
+        raise AssignmentEmailError(f"Brevo email connection failed: {exc}") from exc
+    if not result.get("messageId"):
+        raise AssignmentEmailError(f"Brevo did not confirm the message: {result}")
+    return result
+
+
 def _send_smtp_message(recipient_email, subject, text, html):
     message = EmailMultiAlternatives(
         subject=subject,
@@ -209,6 +265,8 @@ def _send_smtp_message(recipient_email, subject, text, html):
 
 def send_transactional_email(recipient_email, subject, text, html):
     provider = _configured_provider()
+    if provider == AssignmentNotification.Provider.BREVO:
+        return provider, _send_brevo_message(recipient_email, subject, text, html)
     if provider == AssignmentNotification.Provider.CLOUDFLARE:
         return provider, _send_cloudflare_message(recipient_email, subject, text, html)
     if provider == AssignmentNotification.Provider.SMTP:
@@ -228,7 +286,14 @@ def deliver_assignment_notification(notification_id):
     notification.attempts += 1
     _, _, text, html = _message_content(notification.request)
     try:
-        if notification.provider == AssignmentNotification.Provider.CLOUDFLARE:
+        if notification.provider == AssignmentNotification.Provider.BREVO:
+            response = _send_brevo_message(
+                notification.recipient_email,
+                notification.subject,
+                text,
+                html,
+            )
+        elif notification.provider == AssignmentNotification.Provider.CLOUDFLARE:
             response = _send_cloudflare_message(
                 notification.recipient_email,
                 notification.subject,

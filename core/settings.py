@@ -31,9 +31,8 @@ ALLOWED_HOSTS = [
 ]
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:3000/" if DEBUG else "/admin/")
 
-# Assignment email notifications. "auto" uses Cloudflare when all Cloudflare
-# credentials exist, otherwise SMTP when EMAIL_HOST exists, and stays disabled
-# when neither provider is configured.
+# Transactional email. "auto" selects the first fully configured API provider,
+# then SMTP, and stays disabled when no provider is configured.
 ASSIGNMENT_EMAIL_PROVIDER = os.getenv("ASSIGNMENT_EMAIL_PROVIDER", "auto").strip().lower()
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "EngiFlow <notifications@localhost>")
 EMAIL_BACKEND = os.getenv(
@@ -53,7 +52,11 @@ CLOUDFLARE_EMAIL_API_TOKEN = os.getenv("CLOUDFLARE_EMAIL_API_TOKEN", "")
 CLOUDFLARE_EMAIL_FROM_ADDRESS = os.getenv("CLOUDFLARE_EMAIL_FROM_ADDRESS", "")
 CLOUDFLARE_EMAIL_FROM_NAME = os.getenv("CLOUDFLARE_EMAIL_FROM_NAME", "EngiFlow")
 CLOUDFLARE_EMAIL_REPLY_TO = os.getenv("CLOUDFLARE_EMAIL_REPLY_TO", "")
-PORTAL_OTP_TTL_MINUTES = int(os.getenv("PORTAL_OTP_TTL_MINUTES", "10"))
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+BREVO_FROM_ADDRESS = os.getenv("BREVO_FROM_ADDRESS", "")
+BREVO_FROM_NAME = os.getenv("BREVO_FROM_NAME", "EngiFlow")
+BREVO_REPLY_TO = os.getenv("BREVO_REPLY_TO", "")
+PORTAL_OTP_TTL_MINUTES = int(os.getenv("PORTAL_OTP_TTL_MINUTES", "5"))
 PORTAL_OTP_MAX_ATTEMPTS = int(os.getenv("PORTAL_OTP_MAX_ATTEMPTS", "5"))
 PORTAL_OTP_COOLDOWN_SECONDS = int(os.getenv("PORTAL_OTP_COOLDOWN_SECONDS", "60"))
 PORTAL_SESSION_MAX_AGE_SECONDS = int(os.getenv("PORTAL_SESSION_MAX_AGE_SECONDS", str(30 * 24 * 60 * 60)))
