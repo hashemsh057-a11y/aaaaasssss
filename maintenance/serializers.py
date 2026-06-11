@@ -18,6 +18,7 @@ from .models import (
     MaintenanceSpecialty,
     PublicContactInquiry,
     PublicEngineer,
+    RequestActivity,
     RequestEvidence,
     User,
     phone_validator,
@@ -405,6 +406,27 @@ class PublicMaintenanceRequestTrackingSerializer(serializers.ModelSerializer):
         return None
 
 
+class RequestActivitySerializer(serializers.ModelSerializer):
+    engineer_name = serializers.CharField(source="public_engineer.name", read_only=True)
+
+    class Meta:
+        model = RequestActivity
+        fields = ["id", "event_type", "message", "engineer_name", "created_at"]
+
+
+class PortalMaintenanceRequestSerializer(PublicMaintenanceRequestTrackingSerializer):
+    activities = RequestActivitySerializer(many=True, read_only=True)
+
+    class Meta(PublicMaintenanceRequestTrackingSerializer.Meta):
+        fields = [
+            *PublicMaintenanceRequestTrackingSerializer.Meta.fields,
+            "location_details",
+            "description",
+            "is_hazardous",
+            "activities",
+        ]
+
+
 class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
     contact_name = serializers.CharField(max_length=120, write_only=True)
     company_name = serializers.CharField(max_length=180, write_only=True)
@@ -430,6 +452,18 @@ class PublicMaintenanceRequestCreateSerializer(serializers.Serializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.messages) from exc
         return value
+
+    def validate_contact_name(self, value):
+        cleaned = value.strip()
+        if not re.fullmatch(r"[A-Za-z\u0600-\u06FF .'-]{2,120}", cleaned):
+            raise serializers.ValidationError("Contact name must contain letters only.")
+        return cleaned
+
+    def validate_commercial_register(self, value):
+        cleaned = value.strip()
+        if not re.fullmatch(r"[A-Za-z0-9\u0600-\u06FF ./_-]{2,80}", cleaned):
+            raise serializers.ValidationError("Commercial register contains unsupported characters.")
+        return cleaned
 
     def _build_unique_username(self, email):
         local_part = email.split("@", 1)[0].lower()
@@ -519,6 +553,7 @@ class PublicCompanyListSerializer(serializers.ModelSerializer):
             "address",
             "contact_name",
             "email",
+            "is_archived",
         ]
 
 
@@ -563,8 +598,20 @@ class PublicEngineerSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         cleaned = value.strip()
-        if not cleaned:
-            raise serializers.ValidationError("Name is required.")
+        if not re.fullmatch(r"[A-Za-z\u0600-\u06FF .'-]{2,120}", cleaned):
+            raise serializers.ValidationError("Name must contain letters only.")
+        return cleaned
+
+    def validate_department(self, value):
+        cleaned = value.strip()
+        if not re.fullmatch(r"[A-Za-z\u0600-\u06FF .&'-]{2,120}", cleaned):
+            raise serializers.ValidationError("Department must contain letters only.")
+        return cleaned
+
+    def validate_profession(self, value):
+        cleaned = value.strip()
+        if not re.fullmatch(r"[A-Za-z\u0600-\u06FF .&'-]{2,120}", cleaned):
+            raise serializers.ValidationError("Profession must contain letters only.")
         return cleaned
 
     def validate_email(self, value):
@@ -649,3 +696,60 @@ class PublicContactInquirySerializer(serializers.ModelSerializer):
         model = PublicContactInquiry
         fields = ["id", "contact_name", "company_name", "email", "phone", "message", "created_at"]
         read_only_fields = ["id", "created_at"]
+
+
+class CompanyPortalRegistrationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    company_name = serializers.CharField(max_length=180)
+    contact_name = serializers.RegexField(
+        regex=r"^[A-Za-z\u0600-\u06FF .'-]{2,120}$",
+        max_length=120,
+    )
+    commercial_register = serializers.RegexField(
+        regex=r"^[A-Za-z0-9\u0600-\u06FF ./_-]{2,80}$",
+        max_length=80,
+    )
+    phone = serializers.CharField(max_length=20)
+    address = serializers.CharField(max_length=600)
+
+    def validate_phone(self, value):
+        try:
+            phone_validator(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+
+class CompanyPortalRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MaintenanceRequest
+        fields = [
+            "issue_type",
+            "priority",
+            "location_details",
+            "description",
+            "preferred_date",
+            "is_hazardous",
+        ]
+
+    def validate_preferred_date(self, value):
+        if value < timezone.now() - timedelta(minutes=5):
+            raise serializers.ValidationError("Preferred date cannot be in the past.")
+        return value
+
+
+class EngineerPortalActionSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=[
+            MaintenanceRequest.Status.IN_PROGRESS,
+            MaintenanceRequest.Status.WAITING_SPARE_PARTS,
+            MaintenanceRequest.Status.COMPLETED,
+        ],
+        required=False,
+    )
+    note = serializers.CharField(max_length=2000, required=False, allow_blank=False)
+
+    def validate(self, attrs):
+        if not attrs.get("status") and not attrs.get("note"):
+            raise serializers.ValidationError("A status or note is required.")
+        return attrs

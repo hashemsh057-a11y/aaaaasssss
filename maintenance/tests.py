@@ -22,6 +22,7 @@ from .models import (
     MaintenanceSpecialty,
     PublicContactInquiry,
     PublicEngineer,
+    RequestActivity,
     User,
 )
 
@@ -601,6 +602,194 @@ class PublicEndpointTests(MaintenanceAPITestCase):
         self.assertEqual(payload["reply_to"], "support@example.com")
         self.assertIn("text", payload)
         self.assertIn("html", payload)
+
+
+@override_settings(
+    ASSIGNMENT_EMAIL_PROVIDER="smtp",
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    PORTAL_OTP_EXPOSE_CODE=True,
+    PORTAL_OTP_COOLDOWN_SECONDS=0,
+)
+class PortalWorkflowTests(MaintenanceAPITestCase):
+    def register_company(self, email="portal-company@example.com"):
+        request_response = self.client.post(
+            reverse("company-portal-request-code"),
+            {
+                "purpose": "REGISTER",
+                "email": email,
+                "company_name": "Portal Services",
+                "contact_name": "Omar Saleh",
+                "commercial_register": "CR-PORTAL-1",
+                "phone": "+218 91 800 1000",
+                "address": "Tripoli, Libya",
+            },
+            format="json",
+        )
+        self.assertEqual(request_response.status_code, status.HTTP_201_CREATED)
+        verify_response = self.client.post(
+            reverse("company-portal-verify"),
+            {
+                "challenge_id": request_response.data["challenge_id"],
+                "code": request_response.data["debug_code"],
+            },
+            format="json",
+        )
+        self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
+        return verify_response.data["token"], verify_response.data["profile"]
+
+    def engineer_token(self, engineer):
+        request_response = self.client.post(
+            reverse("engineer-portal-request-code"),
+            {"email": engineer.email},
+            format="json",
+        )
+        self.assertEqual(request_response.status_code, status.HTTP_201_CREATED)
+        verify_response = self.client.post(
+            reverse("engineer-portal-verify"),
+            {
+                "challenge_id": request_response.data["challenge_id"],
+                "code": request_response.data["debug_code"],
+            },
+            format="json",
+        )
+        self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
+        return verify_response.data["token"]
+
+    def test_company_registers_by_otp_and_keeps_a_portal_session(self):
+        token, profile = self.register_company()
+
+        response = self.client.get(
+            reverse("company-portal-dashboard"),
+            HTTP_X_PORTAL_TOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile["company_name"], "Portal Services")
+        self.assertEqual(response.data["profile"]["email"], "portal-company@example.com")
+        self.assertEqual(response.data["requests"], [])
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("رمز التحقق", mail.outbox[0].subject)
+
+    def test_archived_company_is_hidden_and_can_register_again(self):
+        delete_response = self.client.delete(
+            reverse("public-admin-company-detail", args=[self.company.id])
+        )
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.company.refresh_from_db()
+        self.company_user.refresh_from_db()
+        self.assertTrue(self.company.is_archived)
+        self.assertFalse(self.company_user.is_active)
+
+        list_response = self.client.get(reverse("public-company-list"))
+        returned_ids = {item["id"] for item in list_response.data}
+        self.assertNotIn(self.company.id, returned_ids)
+
+        token, profile = self.register_company(self.company_user.email)
+        self.company.refresh_from_db()
+        self.company_user.refresh_from_db()
+        self.assertFalse(self.company.is_archived)
+        self.assertTrue(self.company_user.is_active)
+        self.assertEqual(profile["id"], self.company.id)
+        self.assertTrue(token)
+
+    def test_company_request_auto_assigns_only_an_available_idle_specialist(self):
+        busy_engineer = PublicEngineer.objects.create(
+            name="Busy Engineer",
+            phone="+218 91 800 2000",
+            email="busy@example.com",
+            department="Networks",
+            specialty=MaintenanceSpecialty.NETWORKS,
+            profession="Network Engineer",
+            experience_years=4,
+        )
+        idle_engineer = PublicEngineer.objects.create(
+            name="Idle Engineer",
+            phone="+218 91 800 3000",
+            email="idle@example.com",
+            department="Networks",
+            specialty=MaintenanceSpecialty.NETWORKS,
+            profession="Network Engineer",
+            experience_years=6,
+        )
+        MaintenanceRequest.objects.create(
+            client_company=self.company,
+            issue_type=MaintenanceSpecialty.NETWORKS,
+            priority=MaintenanceRequest.Priority.HIGH,
+            location_details="Existing network room",
+            description="Existing active assignment",
+            preferred_date=timezone.now() + timedelta(days=1),
+            status=MaintenanceRequest.Status.IN_PROGRESS,
+            assigned_public_engineer=busy_engineer,
+            assigned_at=timezone.now(),
+            in_progress_at=timezone.now(),
+        )
+        token, _ = self.register_company()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("company-portal-request-create"),
+                {
+                    "issue_type": MaintenanceSpecialty.NETWORKS,
+                    "priority": MaintenanceRequest.Priority.MEDIUM,
+                    "location_details": "Second floor network cabinet",
+                    "description": "Intermittent connection on the second floor.",
+                    "preferred_date": (timezone.now() + timedelta(days=2)).isoformat(),
+                    "is_hazardous": False,
+                },
+                format="json",
+                HTTP_X_PORTAL_TOKEN=token,
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["status"], MaintenanceRequest.Status.ASSIGNED)
+        self.assertEqual(response.data["assigned_public_engineer"], idle_engineer.id)
+        self.assertTrue(
+            RequestActivity.objects.filter(
+                request_id=response.data["id"],
+                event_type=RequestActivity.EventType.AUTO_ASSIGNED,
+            ).exists()
+        )
+
+    def test_engineer_updates_availability_status_and_notes_from_portal(self):
+        engineer = PublicEngineer.objects.create(
+            name="Portal Engineer",
+            phone="+218 91 800 4000",
+            email="portal-engineer@example.com",
+            department="Operations",
+            specialty=MaintenanceSpecialty.ELECTRICITY,
+            profession="Electrical Engineer",
+            experience_years=7,
+        )
+        maintenance_request = self.create_request(
+            status=MaintenanceRequest.Status.ASSIGNED,
+            assigned_public_engineer=engineer,
+            assigned_at=timezone.now(),
+        )
+        token = self.engineer_token(engineer)
+
+        availability_response = self.client.post(
+            reverse("engineer-portal-availability"),
+            {"is_available": False},
+            format="json",
+            HTTP_X_PORTAL_TOKEN=token,
+        )
+        action_response = self.client.post(
+            reverse("engineer-portal-request-action", args=[maintenance_request.id]),
+            {
+                "status": MaintenanceRequest.Status.IN_PROGRESS,
+                "note": "Inspected the electrical panel and started diagnostics.",
+            },
+            format="json",
+            HTTP_X_PORTAL_TOKEN=token,
+        )
+
+        self.assertEqual(availability_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(availability_response.data["is_available"])
+        self.assertEqual(action_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(action_response.data["status"], MaintenanceRequest.Status.IN_PROGRESS)
+        self.assertEqual(len(action_response.data["activities"]), 2)
+        maintenance_request.refresh_from_db()
+        self.assertIsNotNone(maintenance_request.in_progress_at)
 
 
 class PublicReportTests(MaintenanceAPITestCase):

@@ -215,8 +215,8 @@ const copy: Record<Language, Copy> = {
       titleAccent: "",
       titleB: "من أول بلاغ حتى الإغلاق.",
       description:
-        "أرسل بلاغ الصيانة من هذه الصفحة، يصل مباشرة إلى فريق العمل، وتتابع حالته لحظة بلحظة حتى الإنجاز.",
-      primary: "تقديم طلب صيانة",
+        "ادخل إلى حساب شركتك لتسجيل البلاغ، وسيصل مباشرة إلى فريق العمل مع متابعة حالته لحظة بلحظة حتى الإنجاز.",
+      primary: "دخول حساب الشركة",
       secondary: "تتبع طلب سابق",
       dashboardTitle: "لوحة المتابعة المباشرة",
       live: "متصل",
@@ -245,8 +245,8 @@ const copy: Record<Language, Copy> = {
     },
     engineers: {
       eyebrow: "فريق العمل",
-      title: "إضافة مهندس إلى الفريق",
-      description: "أضف بيانات المهندس الأساسية ليُسجَّل في المنظومة. لحماية الخصوصية، تظهر هنا أعداد الفريق فقط، أما التفاصيل الكاملة فتبقى في لوحة المتابعة الخاصة.",
+      title: "مساحة عمل المهندس",
+      description: "سجّل حسابك أو ادخل إلى لوحة المهندس لمتابعة المهام وتحديث حالة التوفر وإرسال الملاحظات الفنية.",
       name: "اسم المهندس",
       phone: "رقم الهاتف",
       email: "البريد الإلكتروني",
@@ -278,7 +278,7 @@ const copy: Record<Language, Copy> = {
     },
     request: {
       eyebrow: "تقديم طلب جديد",
-      title: "تقديم طلب صيانة",
+      title: "بوابة طلبات الشركة",
       description:
         "أدخل بيانات شركتك وتفاصيل العطل، وسيتم تسجيل الطلب تلقائيًا في المنظومة وتعيين رقم تذكرة لمتابعته.",
       companyName: "اسم الشركة",
@@ -330,8 +330,8 @@ const copy: Record<Language, Copy> = {
       titleAccent: "",
       titleB: "from first report to closure.",
       description:
-        "Submit your maintenance request from this page. It reaches the team instantly, and you can track its progress every step of the way.",
-      primary: "Submit a request",
+        "Open your company account to submit a maintenance request and follow every update through completion.",
+      primary: "Company portal",
       secondary: "Track a request",
       dashboardTitle: "Live operations view",
       live: "Live",
@@ -360,8 +360,8 @@ const copy: Record<Language, Copy> = {
     },
     engineers: {
       eyebrow: "Our team",
-      title: "Add an engineer to the team",
-      description: "Add an engineer's core details to register them. For privacy, only counts are shown publicly — full details stay inside the private operations dashboard.",
+      title: "Engineer workspace",
+      description: "Create an engineer account or sign in to manage assignments, availability, and field notes.",
       name: "Engineer name",
       phone: "Phone number",
       email: "Email",
@@ -393,7 +393,7 @@ const copy: Record<Language, Copy> = {
     },
     request: {
       eyebrow: "New request",
-      title: "Submit a maintenance request",
+      title: "Company request portal",
       description:
         "Enter your company details and describe the issue. A ticket number will be assigned automatically for tracking.",
       companyName: "Company name",
@@ -645,8 +645,7 @@ export function PublicLanding() {
     { href: "#services", label: t.nav.services },
     { href: "#workflow", label: t.nav.workflow },
     { href: "#engineers", label: t.nav.engineers },
-    { href: "#stats", label: t.nav.stats },
-    { href: "#request", label: t.nav.request }
+    { href: "#stats", label: t.nav.stats }
   ];
 
   const statItems = [
@@ -685,8 +684,8 @@ export function PublicLanding() {
               {t.nav.language}
             </button>
             <a
-              href="#request"
-              className="hidden h-11 items-center gap-2 rounded-full bg-[#1f86ec] px-5 text-sm font-extrabold text-white no-underline shadow-lg shadow-[#1f86ec]/20 transition-all hover:-translate-y-0.5 hover:bg-[#1567c6] sm:inline-flex"
+              href="/company"
+              className="hidden h-11 items-center gap-2 rounded-lg bg-[#1769aa] px-5 text-sm font-extrabold text-white no-underline transition-colors hover:bg-[#12598f] sm:inline-flex"
             >
               {t.hero.primary}
             </a>
@@ -735,9 +734,9 @@ export function PublicLanding() {
                   </a>
                 ))}
                 <a
-                  href="#request"
+                  href="/company"
                   onClick={() => setMobileOpen(false)}
-                  className="mt-2 rounded-2xl bg-[#1f86ec] px-4 py-4 text-center font-extrabold text-white no-underline"
+                  className="mt-2 rounded-lg bg-[#1769aa] px-4 py-4 text-center font-extrabold text-white no-underline"
                 >
                   {t.hero.primary}
                 </a>
@@ -748,9 +747,7 @@ export function PublicLanding() {
       </AnimatePresence>
 
       <main>
-        <section className="relative overflow-hidden bg-[linear-gradient(135deg,#f8fff9_0%,#edf9fb_45%,#fffaf2_100%)] py-20 sm:py-24">
-          <div className="absolute right-[-8rem] top-[-10rem] h-80 w-80 rounded-full bg-[#a5c2e8]/45 blur-3xl" />
-          <div className="absolute bottom-[-12rem] left-[-10rem] h-96 w-96 rounded-full bg-[#f5ead6]/70 blur-3xl" />
+        <section className="relative overflow-hidden border-b border-[#dce4ec] bg-[#f5f8fb] py-16 sm:py-20">
           <div className="container relative mx-auto grid items-center gap-14 px-4 sm:px-6 md:grid-cols-2">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className={isRtl ? "text-right" : "text-left"}>
               <span className="mb-5 inline-flex rounded-full bg-white/75 px-4 py-2 text-sm font-extrabold text-[#1567c6] shadow-sm">
@@ -770,8 +767,8 @@ export function PublicLanding() {
               <p className="mt-6 max-w-xl text-base leading-8 text-[#5b6b85] md:text-lg">{t.hero.description}</p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <a
-                  href="#request"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#1f86ec] px-6 text-sm font-extrabold text-white no-underline shadow-xl shadow-[#1f86ec]/20 transition-all hover:-translate-y-1 hover:bg-[#1567c6]"
+                  href="/company"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#1769aa] px-6 text-sm font-extrabold text-white no-underline transition-colors hover:bg-[#12598f]"
                 >
                   {t.hero.primary}
                   <DirectionArrow className="h-4 w-4" aria-hidden="true" />
@@ -779,7 +776,7 @@ export function PublicLanding() {
                 <button
                   type="button"
                   onClick={() => setTrackOpen(true)}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/80 px-6 text-sm font-extrabold text-[#1c3263] shadow-sm transition-all hover:-translate-y-1 hover:bg-[#e3edfb]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-[#cbd7e4] bg-white px-6 text-sm font-extrabold text-[#1c3263] transition-colors hover:bg-[#eaf1f8]"
                 >
                   <Search className="h-4 w-4" aria-hidden="true" />
                   {t.hero.secondary}
@@ -793,8 +790,7 @@ export function PublicLanding() {
               transition={{ duration: 0.65, delay: 0.08 }}
               className="relative"
             >
-              <div className="absolute inset-6 rounded-[3rem] bg-[#bfd2ee]/45 blur-3xl" />
-              <div className="relative rounded-[2.25rem] bg-white/72 p-5 shadow-2xl shadow-[#5a8ecc]/20 backdrop-blur-xl">
+              <div className="relative rounded-lg border border-[#d7e0e9] bg-white p-5 shadow-[0_16px_40px_rgba(23,63,115,0.10)]">
                 <div className="mb-6 flex items-center justify-between gap-4">
                   <div>
                     <p className="m-0 text-sm font-extrabold text-[#5b6b85]">{t.hero.dashboardTitle}</p>
@@ -812,7 +808,7 @@ export function PublicLanding() {
                     { label: t.stats.open, value: impactStats ? numberFormat.format(impactStats.total_open_requests) : "—" },
                     { label: t.stats.rate, value: impactStats ? `${numberFormat.format(impactStats.completion_rate)}%` : "—" }
                   ].map((item) => (
-                    <div key={item.label} className="rounded-3xl bg-[#f4f8fd] px-4 py-5">
+                    <div key={item.label} className="rounded-lg border border-[#e0e7ee] bg-[#f6f8fa] px-4 py-5">
                       <p className="m-0 truncate text-xs font-bold text-[#7088a0]">{item.label}</p>
                       <strong className="mt-3 block text-3xl font-extrabold text-[#1567c6]">{item.value}</strong>
                     </div>
@@ -824,14 +820,14 @@ export function PublicLanding() {
                     const issues = impactStats?.top_recurring_maintenance_issues ?? [];
                     if (issues.length === 0) {
                       return (
-                        <p className="m-0 rounded-3xl bg-[#fbfdff] p-6 text-center text-sm font-bold text-[#7088a0]">
+                        <p className="m-0 rounded-lg bg-[#fbfdff] p-6 text-center text-sm font-bold text-[#7088a0]">
                           {t.hero.noActivity}
                         </p>
                       );
                     }
                     const maxTotal = Math.max(...issues.map((issue) => issue.total), 1);
                     return issues.slice(0, 3).map((issue) => (
-                      <div key={issue.issue_type} className="rounded-3xl bg-[#fbfdff] p-4">
+                      <div key={issue.issue_type} className="rounded-lg border border-[#e5eaf0] bg-[#fbfdff] p-4">
                         <div className="mb-3 flex items-center justify-between text-sm font-extrabold text-[#1c3263]">
                           <span>{getSpecialtyName(issue.issue_type, language)}</span>
                           <span className="text-[#7088a0]">{numberFormat.format(issue.total)}</span>
@@ -865,11 +861,12 @@ export function PublicLanding() {
                 return (
                   <motion.article
                     key={service.specialty}
-                    whileHover={{ y: -6 }}
-                    className="rounded-[2rem] bg-[#f0f5fc] p-6 transition-colors hover:bg-[#e3edfb]"
+                    whileHover={{ y: -3 }}
+                    className="relative overflow-hidden rounded-lg border border-[#dbe3eb] bg-white p-6 shadow-[0_8px_24px_rgba(23,63,115,0.06)] transition-all hover:border-[#8bb3d6] hover:shadow-[0_12px_30px_rgba(23,63,115,0.11)]"
                   >
-                    <span className="mb-6 grid h-14 w-14 place-items-center rounded-full bg-[#dde9f9] text-[#1567c6] shadow-sm">
-                      <Icon className="h-7 w-7" aria-hidden="true" />
+                    <span className="absolute inset-x-0 top-0 h-1 bg-[#1769aa]" />
+                    <span className="mb-6 grid h-12 w-12 place-items-center rounded-lg border border-[#cfe0ef] bg-[#edf4fa] text-[#1769aa]">
+                      <Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
                     </span>
                     <h3 className="text-xl font-extrabold text-[#15294d]">{getServiceTitle(service, language)}</h3>
                     <p className="mt-3 text-sm leading-7 text-[#5b6b85]">{getServiceDescription(service, language)}</p>
@@ -915,7 +912,7 @@ export function PublicLanding() {
           </div>
         </section>
 
-        <EngineersSection copy={t} language={language} />
+        <PortalAccessSection copy={t} language={language} />
 
         <section id="stats" className="bg-[#eef7f6] py-20">
           <div className="container mx-auto px-4 sm:px-6">
@@ -925,7 +922,7 @@ export function PublicLanding() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {statItems.map((item) => (
-                <div key={item.label} className="rounded-[2rem] bg-white/70 p-6">
+                <div key={item.label} className="rounded-lg border border-[#d9e2e9] bg-white p-6">
                   <p className="m-0 text-sm font-bold text-[#5b6b85]">{item.label}</p>
                   <strong className="mt-4 block text-3xl font-extrabold text-[#1567c6]">{item.value}</strong>
                 </div>
@@ -934,7 +931,7 @@ export function PublicLanding() {
           </div>
         </section>
 
-        <section id="request" className="bg-[linear-gradient(135deg,#fffdf7_0%,#eef4fc_100%)] py-20 sm:py-24">
+        <section id="request" className="hidden">
           <div className="container mx-auto grid gap-12 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <div className={isRtl ? "text-right" : "text-left"}>
               <span className="text-sm font-extrabold text-[#1567c6]">{t.request.eyebrow}</span>
@@ -1147,7 +1144,7 @@ export function PublicLanding() {
                   required
                   inputMode="numeric"
                   value={ticketNumber}
-                  onChange={(event) => setTicketNumber(event.target.value)}
+                  onChange={(event) => setTicketNumber(event.target.value.replace(/\D/g, ""))}
                   placeholder={t.track.ticketPlaceholder}
                   className="public-input"
                 />
@@ -1194,6 +1191,86 @@ function BrandWordmark() {
         className="h-14 w-14 object-contain sm:h-16 sm:w-16"
       />
     </span>
+  );
+}
+
+function PortalAccessSection({ copy: t, language }: { copy: Copy; language: Language }) {
+  const [engineerCount, setEngineerCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    getPublicEngineers()
+      .then((engineers) => setEngineerCount(engineers.length))
+      .catch(() => setEngineerCount(null));
+  }, []);
+
+  const ar = language === "ar";
+  const entries = [
+    {
+      href: "/company",
+      icon: Building2,
+      title: ar ? "حساب الشركة" : "Company account",
+      description: ar
+        ? "إنشاء حساب، تقديم الطلبات، ومتابعة الأعمال الحالية والسابقة والمهندس المعيّن."
+        : "Create an account, submit requests, and follow current and previous maintenance work.",
+      action: ar ? "دخول أو إنشاء حساب شركة" : "Open company portal",
+      tone: "bg-[#1769aa] text-white hover:bg-[#12598f]"
+    },
+    {
+      href: "/engineer",
+      icon: HardHat,
+      title: t.engineers.title,
+      description: t.engineers.description,
+      action: ar ? "دخول أو تسجيل مهندس" : "Open engineer portal",
+      tone: "bg-[#27364a] text-white hover:bg-[#1d2938]"
+    }
+  ];
+
+  return (
+    <section id="engineers" className="border-y border-[#dce4ec] bg-[#f7f9fb] py-16 sm:py-20">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <span className="text-sm font-extrabold text-[#1769aa]">
+              {ar ? "بوابات المستخدمين" : "User portals"}
+            </span>
+            <h2 className="mt-3 text-3xl font-extrabold leading-tight text-[#15294d]">
+              {ar ? "مساحة مستقلة لكل طرف في عملية الصيانة" : "A dedicated workspace for every maintenance role"}
+            </h2>
+          </div>
+          {engineerCount !== null && (
+            <div className="flex items-center gap-3 rounded-lg border border-[#d7e0e9] bg-white px-4 py-3">
+              <Users className="h-5 w-5 text-[#1769aa]" aria-hidden="true" />
+              <span className="text-sm font-bold text-[#536174]">
+                {new Intl.NumberFormat(ar ? "ar-LY" : "en-US").format(engineerCount)}{" "}
+                {ar ? "مهندس مسجّل" : "registered engineers"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {entries.map((entry) => {
+            const Icon = entry.icon;
+            return (
+              <article key={entry.href} className="rounded-lg border border-[#d9e1e9] bg-white p-6">
+                <span className="grid h-12 w-12 place-items-center rounded-lg border border-[#cfe0ef] bg-[#edf4fa] text-[#1769aa]">
+                  <Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <h3 className="mt-5 text-xl font-extrabold text-[#17233a]">{entry.title}</h3>
+                <p className="mt-2 min-h-14 text-sm leading-7 text-[#66758a]">{entry.description}</p>
+                <a
+                  href={entry.href}
+                  className={`mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold no-underline transition-colors ${entry.tone}`}
+                >
+                  {entry.action}
+                  {ar ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                </a>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -6,6 +6,12 @@ import type {
   MaintenanceRequest,
   MaintenanceStatus,
   PublicCompany,
+  CompanyPortalDashboard,
+  CompanyPortalRegistrationPayload,
+  EngineerPortalDashboard,
+  PortalCodeResponse,
+  PortalMaintenanceRequest,
+  PortalVerifyResponse,
   PublicCapabilities,
   PublicContactPayload,
   PublicEngineer,
@@ -44,6 +50,8 @@ const rawApiBaseUrl = sanitizeApiBaseUrl(
 const API_BASE_URL = rawApiBaseUrl.replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "maintenance_access_token";
 const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
+export const COMPANY_PORTAL_TOKEN_KEY = "engiflow_company_portal_token";
+export const ENGINEER_PORTAL_TOKEN_KEY = "engiflow_engineer_portal_token";
 
 export class BackendUpgradeRequiredError extends Error {
   constructor() {
@@ -239,6 +247,19 @@ export function getPublicEngineers() {
   return apiFetch<PublicEngineer[]>("/public/engineers/");
 }
 
+async function portalFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  headers.set("X-Portal-Token", token);
+  const response = await fetch(`${API_BASE_URL}${withTrailingSlash(path)}`, {
+    ...options,
+    headers
+  });
+  return parseResponse<T>(response);
+}
+
 export async function createPublicEngineer(payload: PublicEngineerPayload) {
   let capabilities: PublicCapabilities;
   try {
@@ -373,4 +394,78 @@ export function getReportUrl(
 
 export function getPublicCompanies() {
   return apiFetch<PublicCompany[]>("/public/companies-list/");
+}
+
+export function deletePublicCompany(id: number) {
+  return apiFetch<void>(`/public/admin/companies/${id}/`, { method: "DELETE" });
+}
+
+export function requestCompanyPortalCode(
+  payload: CompanyPortalRegistrationPayload | { purpose: "LOGIN"; email: string }
+) {
+  return apiFetch<PortalCodeResponse>("/public/portal/company/request-code/", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function verifyCompanyPortalCode(challengeId: number, code: string) {
+  return apiFetch<PortalVerifyResponse<PublicCompany>>("/public/portal/company/verify/", {
+    method: "POST",
+    body: JSON.stringify({ challenge_id: challengeId, code })
+  });
+}
+
+export function getCompanyPortalDashboard(token: string) {
+  return portalFetch<CompanyPortalDashboard>("/public/portal/company/dashboard/", token);
+}
+
+export function createCompanyPortalRequest(
+  token: string,
+  payload: Omit<RequestCreatePayload, "preferred_date"> & { preferred_date: string }
+) {
+  return portalFetch<PortalMaintenanceRequest>("/public/portal/company/requests/", token, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function requestEngineerPortalCode(email: string) {
+  return apiFetch<PortalCodeResponse>("/public/portal/engineer/request-code/", {
+    method: "POST",
+    body: JSON.stringify({ email })
+  });
+}
+
+export function verifyEngineerPortalCode(challengeId: number, code: string) {
+  return apiFetch<PortalVerifyResponse<PublicEngineer>>("/public/portal/engineer/verify/", {
+    method: "POST",
+    body: JSON.stringify({ challenge_id: challengeId, code })
+  });
+}
+
+export function getEngineerPortalDashboard(token: string) {
+  return portalFetch<EngineerPortalDashboard>("/public/portal/engineer/dashboard/", token);
+}
+
+export function setEngineerPortalAvailability(token: string, isAvailable: boolean) {
+  return portalFetch<PublicEngineer>("/public/portal/engineer/availability/", token, {
+    method: "POST",
+    body: JSON.stringify({ is_available: isAvailable })
+  });
+}
+
+export function updateEngineerPortalRequest(
+  token: string,
+  requestId: number,
+  payload: { status?: "IN_PROGRESS" | "WAITING_SPARE_PARTS" | "COMPLETED"; note?: string }
+) {
+  return portalFetch<PortalMaintenanceRequest>(
+    `/public/portal/engineer/requests/${requestId}/action/`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }
+  );
 }

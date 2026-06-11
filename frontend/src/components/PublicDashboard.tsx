@@ -36,6 +36,7 @@ import {
   BackendUpgradeRequiredError,
   adminTransitionRequest,
   createPublicEngineer,
+  deletePublicCompany,
   deletePublicEngineer,
   getReportUrl,
   getPublicCompanies,
@@ -45,6 +46,7 @@ import {
   setRequestCost,
   updatePublicEngineer
 } from "@/src/lib/api";
+import { formatRequestActivity } from "@/src/lib/activity";
 import { copy, getPriorityLabel, getSpecialtyLabel, languages, statusLabels } from "@/src/lib/i18n";
 import { getGoogleMapsSearchUrl } from "@/src/lib/maps";
 import {
@@ -80,6 +82,14 @@ const SPECIALTY_OPTIONS: MaintenanceSpecialty[] = [
   "SERVERS",
   "CYBERSECURITY"
 ];
+
+function lettersOnly(value: string) {
+  return value.replace(/[^A-Za-z\u0600-\u06FF .&'-]/g, "");
+}
+
+function phoneOnly(value: string) {
+  return value.replace(/[^0-9+()\s-]/g, "");
+}
 
 // Visual stepper stages in display order. REJECTED/CLOSED are surfaced as
 // extra terminal states alongside the linear path.
@@ -146,6 +156,7 @@ export function PublicDashboard() {
   const [editingEngineer, setEditingEngineer] = useState<PublicEngineer | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [engineerActionError, setEngineerActionError] = useState<string | null>(null);
+  const [companyActionError, setCompanyActionError] = useState<string | null>(null);
 
   const t = copy[language];
   const dir = languages[language].dir;
@@ -249,6 +260,17 @@ export function PublicDashboard() {
       }
     } catch {
       setEngineerActionError(t.deleteEngineerError);
+    }
+  }
+
+  async function handleCompanyDelete(company: PublicCompany) {
+    if (!window.confirm(t.confirmDeleteCompany)) return;
+    setCompanyActionError(null);
+    try {
+      await deletePublicCompany(company.id);
+      setCompanies((current) => current.filter((item) => item.id !== company.id));
+    } catch {
+      setCompanyActionError(t.deleteCompanyError);
     }
   }
 
@@ -660,6 +682,12 @@ export function PublicDashboard() {
               {t.noCompanies}
             </p>
           ) : (
+            <>
+            {companyActionError && (
+              <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {companyActionError}
+              </p>
+            )}
             <div className="grid gap-3 xl:grid-cols-2">
               {companies.map((company) => (
                 <article key={company.id} className="rounded-lg border border-[#dfe4ea] bg-[#fbfcfd] p-4">
@@ -673,6 +701,15 @@ export function PublicDashboard() {
                         <span className="block truncate text-sm text-[#5b6b85]">{company.contact_name}</span>
                       )}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleCompanyDelete(company)}
+                      title={t.deleteCompany}
+                      aria-label={`${t.deleteCompany}: ${company.company_name}`}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                   <dl className="mt-4 grid gap-2 border-t border-[#e5e9ee] pt-4 text-sm">
                     <Row label={t.commercialRegister}>{company.commercial_register || "—"}</Row>
@@ -701,7 +738,8 @@ export function PublicDashboard() {
                   </dl>
                 </article>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </section>
         )}
@@ -966,7 +1004,7 @@ function AddEngineerCard({
           <input
             required
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => setName(lettersOnly(event.target.value))}
             className="public-input"
           />
         </label>
@@ -977,7 +1015,7 @@ function AddEngineerCard({
             type="tel"
             dir="ltr"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => setPhone(phoneOnly(event.target.value))}
             className="public-input text-start"
           />
         </label>
@@ -997,7 +1035,7 @@ function AddEngineerCard({
           <input
             required
             value={department}
-            onChange={(event) => setDepartment(event.target.value)}
+            onChange={(event) => setDepartment(lettersOnly(event.target.value))}
             className="public-input"
           />
         </label>
@@ -1020,7 +1058,7 @@ function AddEngineerCard({
           <input
             required
             value={profession}
-            onChange={(event) => setProfession(event.target.value)}
+            onChange={(event) => setProfession(lettersOnly(event.target.value))}
             className="public-input"
           />
         </label>
@@ -1032,7 +1070,7 @@ function AddEngineerCard({
             min="0"
             max="60"
             value={experienceYears}
-            onChange={(event) => setExperienceYears(event.target.value)}
+            onChange={(event) => setExperienceYears(event.target.value.replace(/\D/g, "").slice(0, 2))}
             className="public-input"
           />
         </label>
@@ -1150,10 +1188,10 @@ function EngineerEditorModal({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <EditorField label={t.nameLabel} value={name} onChange={setName} required />
-          <EditorField label={t.phone} value={phone} onChange={setPhone} type="tel" dir="ltr" required />
+          <EditorField label={t.nameLabel} value={name} onChange={setName} sanitize={lettersOnly} required />
+          <EditorField label={t.phone} value={phone} onChange={setPhone} sanitize={phoneOnly} type="tel" dir="ltr" required />
           <EditorField label={t.email} value={email} onChange={setEmail} type="email" dir="ltr" required />
-          <EditorField label={t.departmentLabel} value={department} onChange={setDepartment} required />
+          <EditorField label={t.departmentLabel} value={department} onChange={setDepartment} sanitize={lettersOnly} required />
           <label className="grid gap-2 text-sm">
             <span className="font-extrabold text-[#5b6b85]">{t.specialtyLabel}</span>
             <select
@@ -1168,7 +1206,7 @@ function EngineerEditorModal({
               ))}
             </select>
           </label>
-          <EditorField label={t.professionLabel} value={profession} onChange={setProfession} required />
+          <EditorField label={t.professionLabel} value={profession} onChange={setProfession} sanitize={lettersOnly} required />
           <EditorField
             label={t.experienceYears}
             value={experienceYears}
@@ -1176,6 +1214,7 @@ function EngineerEditorModal({
             type="number"
             min="0"
             max="60"
+            sanitize={(value) => value.replace(/\D/g, "").slice(0, 2)}
             required
           />
           <label className="grid gap-2 text-sm">
@@ -1223,6 +1262,7 @@ function EditorField({
   dir,
   min,
   max,
+  sanitize,
   required
 }: {
   label: string;
@@ -1232,6 +1272,7 @@ function EditorField({
   dir?: "ltr" | "rtl";
   min?: string;
   max?: string;
+  sanitize?: (value: string) => string;
   required?: boolean;
 }) {
   return (
@@ -1244,7 +1285,7 @@ function EditorField({
         max={max}
         required={required}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(sanitize ? sanitize(event.target.value) : event.target.value)}
         className="public-input"
       />
     </label>
@@ -1350,6 +1391,33 @@ function RequestCard({
               · {request.assigned_engineer_phone}
             </span>
           )}
+        </div>
+      )}
+
+      {request.activities && request.activities.length > 0 && (
+        <div className="mt-4 rounded-lg border border-[#dfe4ea] bg-white p-4">
+          <p className="m-0 text-xs font-extrabold uppercase text-[#66758a]">
+            {language === "ar" ? "تحديثات المهندس" : "Engineer updates"}
+          </p>
+          <div className="mt-3 grid gap-3">
+            {request.activities.slice(-4).reverse().map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3 text-sm">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#1769aa]" />
+                <div className="min-w-0">
+                  <p className="m-0 text-[#17233a]">{formatRequestActivity(activity, language)}</p>
+                  <span className="mt-1 block text-xs text-[#7b899a]">
+                    {activity.engineer_name || (language === "ar" ? "النظام" : "System")} ·{" "}
+                    <span dir="ltr">
+                      {new Intl.DateTimeFormat("en-GB", {
+                        dateStyle: "short",
+                        timeStyle: "short"
+                      }).format(new Date(activity.created_at))}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

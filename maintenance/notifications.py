@@ -141,7 +141,7 @@ def queue_assignment_notification(maintenance_request):
     return notification
 
 
-def _send_cloudflare(notification, text, html):
+def _send_cloudflare_message(recipient_email, subject, text, html):
     missing = [
         name
         for name, value in [
@@ -155,12 +155,12 @@ def _send_cloudflare(notification, text, html):
         raise AssignmentEmailError(f"Missing Cloudflare email settings: {', '.join(missing)}")
 
     payload = {
-        "to": notification.recipient_email,
+        "to": recipient_email,
         "from": {
             "address": settings.CLOUDFLARE_EMAIL_FROM_ADDRESS,
             "name": settings.CLOUDFLARE_EMAIL_FROM_NAME,
         },
-        "subject": notification.subject,
+        "subject": subject,
         "text": text,
         "html": html,
     }
@@ -193,18 +193,27 @@ def _send_cloudflare(notification, text, html):
     return result
 
 
-def _send_smtp(notification, text, html):
+def _send_smtp_message(recipient_email, subject, text, html):
     message = EmailMultiAlternatives(
-        subject=notification.subject,
+        subject=subject,
         body=text,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[notification.recipient_email],
+        to=[recipient_email],
     )
     message.attach_alternative(html, "text/html")
     accepted = message.send(fail_silently=False)
     if accepted != 1:
         raise AssignmentEmailError("The SMTP backend did not accept the message.")
     return {"accepted": accepted}
+
+
+def send_transactional_email(recipient_email, subject, text, html):
+    provider = _configured_provider()
+    if provider == AssignmentNotification.Provider.CLOUDFLARE:
+        return provider, _send_cloudflare_message(recipient_email, subject, text, html)
+    if provider == AssignmentNotification.Provider.SMTP:
+        return provider, _send_smtp_message(recipient_email, subject, text, html)
+    raise AssignmentEmailError("No email provider is configured.")
 
 
 def deliver_assignment_notification(notification_id):
@@ -220,9 +229,19 @@ def deliver_assignment_notification(notification_id):
     _, _, text, html = _message_content(notification.request)
     try:
         if notification.provider == AssignmentNotification.Provider.CLOUDFLARE:
-            response = _send_cloudflare(notification, text, html)
+            response = _send_cloudflare_message(
+                notification.recipient_email,
+                notification.subject,
+                text,
+                html,
+            )
         elif notification.provider == AssignmentNotification.Provider.SMTP:
-            response = _send_smtp(notification, text, html)
+            response = _send_smtp_message(
+                notification.recipient_email,
+                notification.subject,
+                text,
+                html,
+            )
         else:
             raise AssignmentEmailError("No email provider is configured.")
     except Exception as exc:

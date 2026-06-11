@@ -69,12 +69,14 @@ class CompanyProfile(models.Model):
     commercial_register = models.CharField(max_length=80)
     contact_phone = models.CharField(max_length=20, validators=[phone_validator])
     address = models.TextField()
+    is_archived = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["company_name"]
         indexes = [
             models.Index(fields=["company_name"]),
             models.Index(fields=["commercial_register"]),
+            models.Index(fields=["is_archived"]),
         ]
 
     def __str__(self):
@@ -515,3 +517,67 @@ class AssignmentNotification(models.Model):
 
     def __str__(self):
         return f"Request #{self.request_id} - {self.recipient_email or 'no email'} - {self.status}"
+
+
+class PortalOTPChallenge(models.Model):
+    class Role(models.TextChoices):
+        COMPANY = "COMPANY", "Company"
+        ENGINEER = "ENGINEER", "Engineer"
+
+    class Purpose(models.TextChoices):
+        LOGIN = "LOGIN", "Login"
+        REGISTER = "REGISTER", "Register"
+
+    email = models.EmailField(db_index=True)
+    role = models.CharField(max_length=16, choices=Role.choices)
+    purpose = models.CharField(max_length=16, choices=Purpose.choices)
+    code_hash = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["email", "role", "created_at"]),
+            models.Index(fields=["expires_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.email} - {self.role} - {self.purpose}"
+
+
+class RequestActivity(models.Model):
+    class EventType(models.TextChoices):
+        NOTE = "NOTE", "Note"
+        STATUS = "STATUS", "Status update"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        AUTO_ASSIGNED = "AUTO_ASSIGNED", "Auto assigned"
+
+    request = models.ForeignKey(
+        MaintenanceRequest,
+        on_delete=models.CASCADE,
+        related_name="activities",
+    )
+    public_engineer = models.ForeignKey(
+        PublicEngineer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="request_activities",
+    )
+    event_type = models.CharField(max_length=24, choices=EventType.choices)
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["request", "created_at"]),
+            models.Index(fields=["public_engineer", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Request #{self.request_id} - {self.event_type}"

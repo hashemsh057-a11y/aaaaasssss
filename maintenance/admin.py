@@ -7,8 +7,10 @@ from .models import (
     CompanyProfile,
     EngineerProfile,
     MaintenanceRequest,
+    PortalOTPChallenge,
     PublicContactInquiry,
     PublicEngineer,
+    RequestActivity,
     RequestEvidence,
     User,
 )
@@ -29,7 +31,8 @@ class UserAdmin(DjangoUserAdmin):
 
 @admin.register(CompanyProfile)
 class CompanyProfileAdmin(admin.ModelAdmin):
-    list_display = ("company_name", "commercial_register", "contact_phone", "user")
+    list_display = ("company_name", "commercial_register", "contact_phone", "user", "is_archived")
+    list_filter = ("is_archived",)
     search_fields = ("company_name", "commercial_register", "user__email", "user__username")
     autocomplete_fields = ("user",)
 
@@ -47,6 +50,12 @@ class RequestEvidenceInline(admin.TabularInline):
     extra = 0
     readonly_fields = ("uploaded_at",)
     autocomplete_fields = ("uploaded_by",)
+
+
+class RequestActivityInline(admin.TabularInline):
+    model = RequestActivity
+    extra = 0
+    readonly_fields = ("event_type", "public_engineer", "message", "created_at")
 
 
 @admin.register(MaintenanceRequest)
@@ -74,7 +83,7 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
         "updated_at",
     )
     autocomplete_fields = ("client_company", "assigned_engineer")
-    inlines = [RequestEvidenceInline]
+    inlines = [RequestEvidenceInline, RequestActivityInline]
 
 
 @admin.register(RequestEvidence)
@@ -162,3 +171,29 @@ class AssignmentNotificationAdmin(admin.ModelAdmin):
             deliver_assignment_notification(notification.pk)
             retried += 1
         self.message_user(request, f"Retried {retried} assignment notification(s).")
+
+
+@admin.register(PortalOTPChallenge)
+class PortalOTPChallengeAdmin(admin.ModelAdmin):
+    list_display = ("email", "role", "purpose", "attempts", "expires_at", "consumed_at", "created_at")
+    list_filter = ("role", "purpose", "consumed_at", "created_at")
+    search_fields = ("email",)
+    readonly_fields = (
+        "email",
+        "role",
+        "purpose",
+        "code_hash",
+        "payload",
+        "attempts",
+        "expires_at",
+        "consumed_at",
+        "created_at",
+    )
+
+
+@admin.register(RequestActivity)
+class RequestActivityAdmin(admin.ModelAdmin):
+    list_display = ("request", "event_type", "public_engineer", "created_at")
+    list_filter = ("event_type", "created_at")
+    search_fields = ("request__client_company__company_name", "public_engineer__name", "message")
+    readonly_fields = ("request", "public_engineer", "event_type", "message", "created_at")

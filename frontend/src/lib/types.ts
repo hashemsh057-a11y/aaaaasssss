@@ -133,6 +133,7 @@ export type PublicTrackedRequest = {
   created_at: string;
   updated_at: string;
   cost: string | null;
+  activities?: PortalRequestActivity[];
 };
 
 export type AdminTransitionPayload = {
@@ -201,8 +202,54 @@ export type PublicCompany = {
   address: string;
   contact_name: string;
   email: string;
+  is_archived: boolean;
 };
 
+export type PortalRequestActivity = {
+  id: number;
+  event_type: "NOTE" | "STATUS" | "ACCEPTED" | "AUTO_ASSIGNED";
+  message: string;
+  engineer_name: string | null;
+  created_at: string;
+};
+
+export type PortalMaintenanceRequest = PublicTrackedRequest & {
+  location_details: string;
+  description: string;
+  is_hazardous: boolean;
+  activities: PortalRequestActivity[];
+};
+
+export type PortalCodeResponse = {
+  challenge_id: number;
+  expires_in_seconds: number;
+  debug_code?: string;
+};
+
+export type CompanyPortalRegistrationPayload = {
+  purpose: "REGISTER";
+  email: string;
+  company_name: string;
+  contact_name: string;
+  commercial_register: string;
+  phone: string;
+  address: string;
+};
+
+export type CompanyPortalDashboard = {
+  profile: PublicCompany;
+  requests: PortalMaintenanceRequest[];
+};
+
+export type EngineerPortalDashboard = {
+  profile: PublicEngineer;
+  requests: PortalMaintenanceRequest[];
+};
+
+export type PortalVerifyResponse<T> = {
+  token: string;
+  profile: T;
+};
 
 export type PublicMaintenanceRequestPayload = {
   contact_name: string;
