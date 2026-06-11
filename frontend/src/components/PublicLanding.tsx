@@ -4,12 +4,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  BriefcaseBusiness,
   Building2,
   CalendarClock,
+  Camera,
   CheckCircle2,
   ClipboardList,
+  Code2,
+  Droplets,
   Globe2,
   HardHat,
+  HeartPulse,
   Loader2,
   Mail,
   MapPin,
@@ -17,6 +22,7 @@ import {
   Network,
   Phone,
   Search,
+  Server,
   ShieldCheck,
   Snowflake,
   UserPlus,
@@ -67,7 +73,6 @@ type RequestFormState = Omit<PublicMaintenanceRequestPayload, "preferred_date"> 
 type Copy = {
   dir: "rtl" | "ltr";
   brand: string;
-  tagline: string;
   nav: {
     services: string;
     workflow: string;
@@ -199,7 +204,6 @@ const copy: Record<Language, Copy> = {
   ar: {
     dir: "rtl",
     brand: "إنجي فلو",
-    tagline: "خطّط. أدِر. أنجز.",
     nav: {
       services: "الخدمات",
       workflow: "المسار",
@@ -237,7 +241,7 @@ const copy: Record<Language, Copy> = {
     },
     stats: {
       eyebrow: "إحصائيات عامة",
-      title: "نظرة سريعة على أداء المنظومة",
+      title: "مؤشرات الأداء والإحصائيات التشغيلية",
       total: "إجمالي الطلبات",
       open: "طلبات قيد المعالجة",
       completed: "طلبات مكتملة",
@@ -314,7 +318,6 @@ const copy: Record<Language, Copy> = {
   en: {
     dir: "ltr",
     brand: "EngiFlow",
-    tagline: "Plan. Manage. Achieve.",
     nav: {
       services: "Services",
       workflow: "Workflow",
@@ -352,7 +355,7 @@ const copy: Record<Language, Copy> = {
     },
     stats: {
       eyebrow: "Performance overview",
-      title: "A quick look at system performance",
+      title: "Operational performance and service metrics",
       total: "Total requests",
       open: "In progress",
       completed: "Completed",
@@ -460,6 +463,46 @@ const specialties: ServiceItem[] = [
     enTitle: "Cybersecurity",
     arDesc: "بلاغات أمنية مع مراجعة مضبوطة وقابلة للتوثيق.",
     enDesc: "Security reports with controlled, auditable review."
+  },
+  {
+    specialty: "PLUMBING",
+    icon: Droplets,
+    arTitle: "السباكة",
+    enTitle: "Plumbing",
+    arDesc: "تسربات، تمديدات، مضخات، وأنظمة المياه والصرف.",
+    enDesc: "Leaks, piping, pumps, water, and drainage systems."
+  },
+  {
+    specialty: "MEDICAL_DEVICES",
+    icon: HeartPulse,
+    arTitle: "الأجهزة الطبية",
+    enTitle: "Medical devices",
+    arDesc: "صيانة الأجهزة الطبية ومتابعة الأعطال الفنية الحساسة.",
+    enDesc: "Medical equipment maintenance and sensitive technical faults."
+  },
+  {
+    specialty: "SURVEILLANCE",
+    icon: Camera,
+    arTitle: "أنظمة المراقبة",
+    enTitle: "Surveillance",
+    arDesc: "كاميرات، مسجلات، تخزين، ونقاط مراقبة المنشآت.",
+    enDesc: "Cameras, recorders, storage, and facility monitoring points."
+  },
+  {
+    specialty: "SOFTWARE",
+    icon: Code2,
+    arTitle: "البرمجيات",
+    enTitle: "Software",
+    arDesc: "أعطال الأنظمة والتطبيقات والتكاملات التشغيلية.",
+    enDesc: "System, application, and operational integration issues."
+  },
+  {
+    specialty: "SERVERS",
+    icon: Server,
+    arTitle: "الخوادم",
+    enTitle: "Servers",
+    arDesc: "خوادم، تخزين، نسخ احتياطي، وخدمات البنية التحتية.",
+    enDesc: "Servers, storage, backups, and infrastructure services."
   }
 ];
 
@@ -584,6 +627,9 @@ export function PublicLanding() {
   const [requestState, setRequestState] = useState<"idle" | "submitting" | "created">("idle");
   const [createdTicket, setCreatedTicket] = useState<PublicTrackedRequest | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [directoryEngineers, setDirectoryEngineers] = useState<PublicEngineer[]>([]);
+  const [engineersLoading, setEngineersLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
   const t = copy[language];
   const isRtl = t.dir === "rtl";
@@ -601,6 +647,13 @@ export function PublicLanding() {
       if (document.visibilityState === "visible") refreshImpact();
     }, 54_000);
     return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    getPublicEngineers()
+      .then(setDirectoryEngineers)
+      .catch(() => setDirectoryEngineers([]))
+      .finally(() => setEngineersLoading(false));
   }, []);
 
   async function handleTrackSubmit(event: FormEvent<HTMLFormElement>) {
@@ -683,12 +736,6 @@ export function PublicLanding() {
               <Globe2 className="h-4 w-4" aria-hidden="true" />
               {t.nav.language}
             </button>
-            <a
-              href="/company"
-              className="hidden h-11 items-center gap-2 rounded-lg bg-[#1769aa] px-5 text-sm font-extrabold text-white no-underline transition-colors hover:bg-[#12598f] sm:inline-flex"
-            >
-              {t.hero.primary}
-            </a>
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -733,13 +780,6 @@ export function PublicLanding() {
                     {link.label}
                   </a>
                 ))}
-                <a
-                  href="/company"
-                  onClick={() => setMobileOpen(false)}
-                  className="mt-2 rounded-lg bg-[#1769aa] px-4 py-4 text-center font-extrabold text-white no-underline"
-                >
-                  {t.hero.primary}
-                </a>
               </div>
             </motion.aside>
           </motion.div>
@@ -855,14 +895,16 @@ export function PublicLanding() {
               <p className="mt-4 text-base leading-8 text-[#5b6b85]">{t.services.description}</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {specialties.map((service) => {
                 const Icon = service.icon;
                 return (
-                  <motion.article
+                  <motion.button
+                    type="button"
                     key={service.specialty}
                     whileHover={{ y: -3 }}
-                    className="relative overflow-hidden rounded-lg border border-[#dbe3eb] bg-white p-6 shadow-[0_8px_24px_rgba(23,63,115,0.06)] transition-all hover:border-[#8bb3d6] hover:shadow-[0_12px_30px_rgba(23,63,115,0.11)]"
+                    onClick={() => setSelectedService(service)}
+                    className="relative min-h-[250px] overflow-hidden rounded-lg border border-[#dbe3eb] bg-white p-6 text-start shadow-[0_8px_24px_rgba(23,63,115,0.06)] transition-all hover:border-[#8bb3d6] hover:shadow-[0_12px_30px_rgba(23,63,115,0.11)]"
                   >
                     <span className="absolute inset-x-0 top-0 h-1 bg-[#1769aa]" />
                     <span className="mb-6 grid h-12 w-12 place-items-center rounded-lg border border-[#cfe0ef] bg-[#edf4fa] text-[#1769aa]">
@@ -870,7 +912,11 @@ export function PublicLanding() {
                     </span>
                     <h3 className="text-xl font-extrabold text-[#15294d]">{getServiceTitle(service, language)}</h3>
                     <p className="mt-3 text-sm leading-7 text-[#5b6b85]">{getServiceDescription(service, language)}</p>
-                  </motion.article>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-[#1769aa]">
+                      <Users className="h-4 w-4" aria-hidden="true" />
+                      {language === "ar" ? "عرض المهندسين المتوفرين" : "View available engineers"}
+                    </span>
+                  </motion.button>
                 );
               })}
             </div>
@@ -1100,11 +1146,24 @@ export function PublicLanding() {
       </main>
 
       <footer className="bg-[#fbfdff] py-8">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-center text-sm text-[#5b6b85] sm:px-6 md:flex-row md:text-start">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#7088a0]">{t.tagline}</span>
+        <div className="container mx-auto flex justify-center px-4 text-center text-sm text-[#5b6b85] sm:px-6">
           <p className="m-0 max-w-md">{t.footer}</p>
         </div>
       </footer>
+
+      <AnimatePresence>
+        {selectedService && (
+          <SpecialtyEngineersModal
+            service={selectedService}
+            engineers={directoryEngineers.filter(
+              (engineer) => engineer.specialty === selectedService.specialty && engineer.is_available
+            )}
+            loading={engineersLoading}
+            language={language}
+            onClose={() => setSelectedService(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {trackOpen && (
@@ -1174,6 +1233,121 @@ export function PublicLanding() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function SpecialtyEngineersModal({
+  service,
+  engineers,
+  loading,
+  language,
+  onClose
+}: {
+  service: ServiceItem;
+  engineers: PublicEngineer[];
+  loading: boolean;
+  language: Language;
+  onClose: () => void;
+}) {
+  const isArabic = language === "ar";
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[90] grid place-items-center overflow-y-auto bg-[#10213d]/55 p-4 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={isArabic ? "المهندسون المتوفرون" : "Available engineers"}
+    >
+      <motion.section
+        initial={{ opacity: 0, y: 18, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 18, scale: 0.98 }}
+        className="my-auto w-full max-w-3xl rounded-lg border border-[#d7e0e9] bg-white shadow-2xl"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-[#e1e7ed] p-5 sm:p-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#eaf2f9] text-[#1769aa]">
+              <Users className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <span className="block text-xs font-bold text-[#1769aa]">
+                {isArabic ? "المهندسون المتوفرون" : "Available engineers"}
+              </span>
+              <h2 className="m-0 mt-1 text-xl font-extrabold text-[#17233a]">
+                {getServiceTitle(service, language)}
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#eef2f6] text-[#455468] hover:bg-[#e1e7ed]"
+            aria-label={isArabic ? "إغلاق" : "Close"}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="p-5 sm:p-6">
+          {loading ? (
+            <div className="flex min-h-40 items-center justify-center gap-3 text-sm font-bold text-[#66758a]">
+              <Loader2 className="h-5 w-5 animate-spin text-[#1769aa]" aria-hidden="true" />
+              {isArabic ? "جارٍ تحميل قائمة المهندسين..." : "Loading engineers..."}
+            </div>
+          ) : engineers.length === 0 ? (
+            <div className="grid min-h-40 place-items-center rounded-lg border border-dashed border-[#cbd5df] bg-[#f8fafb] p-6 text-center">
+              <div>
+                <HardHat className="mx-auto h-7 w-7 text-[#7b899a]" aria-hidden="true" />
+                <p className="m-0 mt-3 font-extrabold text-[#455468]">
+                  {isArabic
+                    ? "لا يوجد مهندسون متوفرون في هذا التخصص حاليًا"
+                    : "No engineers are currently available in this specialty"}
+                </p>
+                <span className="mt-1 block text-sm text-[#7b899a]">
+                  {isArabic
+                    ? "ستظهر الأسماء هنا تلقائيًا عند تغيير حالة مهندس إلى متوفر."
+                    : "Names will appear automatically when an engineer becomes available."}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {engineers.map((engineer) => (
+                <article
+                  key={engineer.id}
+                  className="flex min-w-0 items-center gap-4 rounded-lg border border-[#dce3ea] bg-[#fbfcfd] p-4"
+                >
+                  <EngineerAvatar
+                    src={engineer.avatar}
+                    alt={engineer.name}
+                    className="h-14 w-14 rounded-lg"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <strong className="truncate text-base text-[#17233a]">{engineer.name}</strong>
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full bg-[#2c8b4b]"
+                        title={isArabic ? "متوفر" : "Available"}
+                      />
+                    </div>
+                    <p className="m-0 mt-1 flex items-center gap-2 truncate text-sm text-[#66758a]">
+                      <BriefcaseBusiness className="h-4 w-4 shrink-0 text-[#1769aa]" aria-hidden="true" />
+                      {engineer.profession || getServiceTitle(service, language)}
+                    </p>
+                    <span className="mt-1 block text-xs font-semibold text-[#7b899a]">
+                      {engineer.experience_years} {isArabic ? "سنوات خبرة" : "years of experience"}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }
 

@@ -60,6 +60,16 @@ export class BackendUpgradeRequiredError extends Error {
   }
 }
 
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 export function getApiAssetUrl(value: string | null | undefined): string | null {
   if (!value) return null;
   if (/^(https?:|blob:|data:)/i.test(value)) return value;
@@ -113,7 +123,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   if (!response.ok) {
     const message = typeof payload === "string" ? payload : JSON.stringify(payload);
-    throw new Error(message || response.statusText);
+    throw new ApiRequestError(response.status, message || response.statusText);
   }
   return payload as T;
 }

@@ -20,6 +20,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  ApiRequestError,
   COMPANY_PORTAL_TOKEN_KEY,
   createCompanyPortalRequest,
   getCompanyPortalDashboard,
@@ -242,7 +243,12 @@ function CompanyAuth({ onAuthenticated }: { onAuthenticated: (token: string) => 
       const response = await requestCompanyPortalCode(payload);
       setChallengeId(response.challenge_id);
       setDebugCode(response.debug_code ?? null);
-    } catch {
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && caught.status === 404) {
+        setError("خادم PythonAnywhere لم يُحدّث بعد لدعم حسابات الشركات والتحقق بالبريد.");
+        setBusy(false);
+        return;
+      }
       setError(
         mode === "LOGIN"
           ? "تعذر العثور على الحساب أو إرسال رمز التحقق."

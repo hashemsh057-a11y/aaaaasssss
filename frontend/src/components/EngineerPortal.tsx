@@ -24,6 +24,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  ApiRequestError,
   ENGINEER_PORTAL_TOKEN_KEY,
   createPublicEngineer,
   getApiAssetUrl,
@@ -311,7 +312,14 @@ function EngineerAuth({ onAuthenticated }: { onAuthenticated: (token: string) =>
       const response = await requestEngineerPortalCode(email.trim());
       setChallengeId(response.challenge_id);
       setDebugCode(response.debug_code ?? null);
-    } catch {
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && caught.status === 404) {
+        setError(
+          "خادم PythonAnywhere لم يُحدّث بعد لدعم تسجيل الدخول بالبريد. الحساب قد يكون موجودًا، لكن يجب تحديث الخادم أولًا."
+        );
+        setBusy(false);
+        return;
+      }
       setError(
         mode === "REGISTER"
           ? "تعذر إنشاء الحساب. تحقق من البيانات أو استخدم تسجيل الدخول إذا كان البريد مسجلًا."
