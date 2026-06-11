@@ -57,7 +57,9 @@ PORTAL_OTP_TTL_MINUTES = int(os.getenv("PORTAL_OTP_TTL_MINUTES", "10"))
 PORTAL_OTP_MAX_ATTEMPTS = int(os.getenv("PORTAL_OTP_MAX_ATTEMPTS", "5"))
 PORTAL_OTP_COOLDOWN_SECONDS = int(os.getenv("PORTAL_OTP_COOLDOWN_SECONDS", "60"))
 PORTAL_SESSION_MAX_AGE_SECONDS = int(os.getenv("PORTAL_SESSION_MAX_AGE_SECONDS", str(30 * 24 * 60 * 60)))
-PORTAL_OTP_EXPOSE_CODE = env_bool("PORTAL_OTP_EXPOSE_CODE", DEBUG)
+# OTP codes must never be exposed by accident. Local development can opt in
+# explicitly with both DJANGO_DEBUG=True and PORTAL_OTP_EXPOSE_CODE=True.
+PORTAL_OTP_EXPOSE_CODE = DEBUG and env_bool("PORTAL_OTP_EXPOSE_CODE", False)
 
 
 INSTALLED_APPS = [

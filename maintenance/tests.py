@@ -670,6 +670,28 @@ class PortalWorkflowTests(MaintenanceAPITestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("رمز التحقق", mail.outbox[0].subject)
 
+    @override_settings(PORTAL_OTP_EXPOSE_CODE=False)
+    def test_portal_code_is_not_exposed_when_debug_response_is_disabled(self):
+        engineer = PublicEngineer.objects.create(
+            name="Private Code Engineer",
+            phone="+218 91 800 4500",
+            email="private-code@example.com",
+            department="Networks",
+            specialty=MaintenanceSpecialty.NETWORKS,
+            profession="Network Engineer",
+            experience_years=3,
+        )
+
+        response = self.client.post(
+            reverse("engineer-portal-request-code"),
+            {"email": engineer.email},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn("debug_code", response.data)
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_archived_company_is_hidden_and_can_register_again(self):
         delete_response = self.client.delete(
             reverse("public-admin-company-detail", args=[self.company.id])

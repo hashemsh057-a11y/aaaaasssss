@@ -53,6 +53,27 @@ const REFRESH_TOKEN_KEY = "maintenance_refresh_token";
 export const COMPANY_PORTAL_TOKEN_KEY = "engiflow_company_portal_token";
 export const ENGINEER_PORTAL_TOKEN_KEY = "engiflow_engineer_portal_token";
 
+export function normalizeOtpInput(value: string): string {
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
+  return Array.from(value)
+    .map((character) => {
+      const arabicIndex = arabicDigits.indexOf(character);
+      if (arabicIndex >= 0) return String(arabicIndex);
+      const persianIndex = persianDigits.indexOf(character);
+      if (persianIndex >= 0) return String(persianIndex);
+      return character;
+    })
+    .join("")
+    .replace(/\D/g, "")
+    .slice(0, 4);
+}
+
+export function canShowPortalDebugCode(): boolean {
+  if (typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
 export class BackendUpgradeRequiredError extends Error {
   constructor() {
     super("The backend does not support the current engineer profile API.");

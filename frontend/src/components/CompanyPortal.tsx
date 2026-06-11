@@ -21,9 +21,11 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ApiRequestError,
+  canShowPortalDebugCode,
   COMPANY_PORTAL_TOKEN_KEY,
   createCompanyPortalRequest,
   getCompanyPortalDashboard,
+  normalizeOtpInput,
   requestCompanyPortalCode,
   verifyCompanyPortalCode
 } from "@/src/lib/api";
@@ -242,7 +244,7 @@ function CompanyAuth({ onAuthenticated }: { onAuthenticated: (token: string) => 
             } satisfies CompanyPortalRegistrationPayload);
       const response = await requestCompanyPortalCode(payload);
       setChallengeId(response.challenge_id);
-      setDebugCode(response.debug_code ?? null);
+      setDebugCode(canShowPortalDebugCode() ? response.debug_code ?? null : null);
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.status === 404) {
         setError("خادم PythonAnywhere لم يُحدّث بعد لدعم حسابات الشركات والتحقق بالبريد.");
@@ -267,8 +269,12 @@ function CompanyAuth({ onAuthenticated }: { onAuthenticated: (token: string) => 
     try {
       const response = await verifyCompanyPortalCode(challengeId, code);
       onAuthenticated(response.token);
-    } catch {
-      setError("رمز التحقق غير صحيح أو انتهت صلاحيته.");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiRequestError && caught.status === 429
+          ? "تجاوزت عدد المحاولات المسموح. اطلب رمزًا جديدًا."
+          : "الرمز غير صحيح أو منتهي الصلاحية. أدخل أحدث رمز أُرسل إلى بريد الشركة."
+      );
     } finally {
       setBusy(false);
     }
@@ -419,11 +425,12 @@ function CompanyAuth({ onAuthenticated }: { onAuthenticated: (token: string) => 
                 required
                 autoFocus
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 pattern="[0-9]{4}"
                 maxLength={4}
                 dir="ltr"
                 value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(event) => setCode(normalizeOtpInput(event.target.value))}
                 className="mt-6 h-14 w-full rounded-lg border border-[#bfcbd8] bg-white text-center text-2xl font-bold tracking-[0.45em] text-[#173f73] outline-none focus:border-[#1769aa] focus:ring-4 focus:ring-[#1769aa]/10"
               />
               {debugCode && (

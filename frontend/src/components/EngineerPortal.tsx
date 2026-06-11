@@ -25,10 +25,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   ApiRequestError,
+  canShowPortalDebugCode,
   ENGINEER_PORTAL_TOKEN_KEY,
   createPublicEngineer,
   getApiAssetUrl,
   getEngineerPortalDashboard,
+  normalizeOtpInput,
   requestEngineerPortalCode,
   setEngineerPortalAvailability,
   updateEngineerPortalRequest,
@@ -311,7 +313,7 @@ function EngineerAuth({ onAuthenticated }: { onAuthenticated: (token: string) =>
       }
       const response = await requestEngineerPortalCode(email.trim());
       setChallengeId(response.challenge_id);
-      setDebugCode(response.debug_code ?? null);
+      setDebugCode(canShowPortalDebugCode() ? response.debug_code ?? null : null);
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.status === 404) {
         setError(
@@ -338,8 +340,12 @@ function EngineerAuth({ onAuthenticated }: { onAuthenticated: (token: string) =>
     try {
       const response = await verifyEngineerPortalCode(challengeId, code);
       onAuthenticated(response.token);
-    } catch {
-      setError("رمز التحقق غير صحيح أو انتهت صلاحيته.");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiRequestError && caught.status === 429
+          ? "تجاوزت عدد المحاولات المسموح. اطلب رمزًا جديدًا."
+          : "الرمز غير صحيح أو منتهي الصلاحية. أدخل أحدث رمز أُرسل إلى بريدك."
+      );
     } finally {
       setBusy(false);
     }
@@ -515,11 +521,12 @@ function EngineerAuth({ onAuthenticated }: { onAuthenticated: (token: string) =>
                 required
                 autoFocus
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 pattern="[0-9]{4}"
                 maxLength={4}
                 dir="ltr"
                 value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(event) => setCode(normalizeOtpInput(event.target.value))}
                 className="h-14 rounded-lg border border-[#bfcbd8] text-center text-2xl font-bold tracking-[0.45em] outline-none focus:border-[#1769aa] focus:ring-4 focus:ring-[#1769aa]/10"
               />
               {debugCode && <p className="m-0 text-xs text-[#66758a]">رمز بيئة التطوير: <b dir="ltr">{debugCode}</b></p>}
