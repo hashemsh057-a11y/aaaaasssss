@@ -5,22 +5,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Language } from "@/src/lib/types";
 
-/**
- * Pure client-side gate for the operations dashboard.
- *
- * Why client-side: every previous attempt to authenticate against the Django
- * JWT endpoint hit a real-world blocker (Arabic usernames, browser cache,
- * env-var typos, CORS surprises). The result was "I can't log in" loops.
- * The dashboard is a private operations view for a single operator, so a
- * local check against fixed credentials + a localStorage flag removes all
- * those blockers and matches the user's request for "no obstacles".
- *
- * Credentials accepted (case-insensitive on the username so Arabic/English
- * input both work):
- *   username: hashem  |  هاشم
- *   password: 123456
- */
-
 const ACCEPTED_USERNAMES = ["hashem", "هاشم"];
 const ACCEPTED_PASSWORD = "123456";
 const STORAGE_KEY = "engiflow_dashboard_session";
@@ -35,7 +19,6 @@ const COPY: Record<Language, {
   submit: string;
   submitting: string;
   invalid: string;
-  hint: string;
   switchLang: string;
 }> = {
   ar: {
@@ -47,7 +30,6 @@ const COPY: Record<Language, {
     submit: "دخول المنظومة",
     submitting: "جارٍ الدخول…",
     invalid: "اسم المستخدم أو كلمة المرور غير صحيحة.",
-    hint: "اسم المستخدم: hashem أو هاشم • كلمة المرور: 123456",
     switchLang: "English"
   },
   en: {
@@ -59,7 +41,6 @@ const COPY: Record<Language, {
     submit: "Enter dashboard",
     submitting: "Signing in…",
     invalid: "Wrong username or password.",
-    hint: "Username: hashem or هاشم • Password: 123456",
     switchLang: "العربية"
   }
 };
@@ -167,7 +148,7 @@ export function DashboardLogin({
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="username"
-                placeholder="hashem"
+                placeholder={language === "ar" ? "أدخل اسم المستخدم" : "Enter username"}
                 className="min-h-12 rounded-2xl border border-[#c3d4ec] bg-white px-4 text-base font-bold text-[#15294d] outline-none transition focus:border-[#1f86ec] focus:ring-4 focus:ring-[#1f86ec]/20"
                 required
               />
@@ -210,9 +191,6 @@ export function DashboardLogin({
             {submitting ? t.submitting : t.submit}
           </button>
 
-          <p className="m-0 mt-5 text-center text-xs leading-6 text-[#7088a0]" dir="ltr">
-            {t.hint}
-          </p>
         </form>
 
         <div className="mt-5 text-center">
