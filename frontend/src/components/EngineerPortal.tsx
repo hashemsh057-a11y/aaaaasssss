@@ -322,6 +322,16 @@ function EngineerAuth({ onAuthenticated }: { onAuthenticated: (token: string) =>
         setBusy(false);
         return;
       }
+      if (caught instanceof ApiRequestError && caught.status === 503) {
+        setError("خدمة إرسال البريد غير مهيأة على الخادم حاليًا. يلزم ضبط حساب الإرسال في PythonAnywhere.");
+        setBusy(false);
+        return;
+      }
+      if (caught instanceof ApiRequestError && caught.status === 429) {
+        setError("انتظر دقيقة قبل طلب رمز تحقق جديد.");
+        setBusy(false);
+        return;
+      }
       setError(
         mode === "REGISTER"
           ? "تعذر إنشاء الحساب. تحقق من البيانات أو استخدم تسجيل الدخول إذا كان البريد مسجلًا."
